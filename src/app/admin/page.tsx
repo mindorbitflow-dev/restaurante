@@ -373,14 +373,14 @@ export default function AdminPage() {
     setAuthLoading(true);
 
     const loginInput = email.trim().toLowerCase();
-    
-    // Normalizar entrada: si no tiene '@', asumimos que es el nombre de usuario de King Blacked
-    let resolvedEmail = loginInput;
-    if (!resolvedEmail.includes('@')) {
-      resolvedEmail = `${resolvedEmail}@kingblacked.com`;
-    }
 
     if (isMock) {
+      // En demo permitimos usuario corto para facilitar pruebas locales.
+      let resolvedEmail = loginInput;
+      if (!resolvedEmail.includes('@')) {
+        resolvedEmail = `${resolvedEmail}@kingblacked.com`;
+      }
+
       const demoUsers = [
         { email: 'admin@kingblacked.com', username: 'admin', password: 'admin123', role: 'Administrador Principal' },
         { email: 'manager@kingblacked.com', username: 'manager', password: 'manager123', role: 'Gerente de Turno' },
@@ -417,9 +417,15 @@ export default function AdminPage() {
       setAuthLoading(false);
     } else {
       // Real Supabase Auth Login
+      if (!loginInput.includes('@')) {
+        setAuthLoading(false);
+        setAuthError('En modo Supabase debes ingresar el correo exacto registrado en Auth, no un nombre de usuario.');
+        return;
+      }
+
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
-          email: resolvedEmail,
+          email: loginInput,
           password
         });
         
@@ -438,14 +444,14 @@ export default function AdminPage() {
           }
         } else {
           setIsAuthenticated(true);
-          const activeEmail = data.user?.email || resolvedEmail;
+          const activeEmail = data.user?.email || loginInput;
           setCurrentUserEmail(activeEmail);
           localStorage.setItem('kb_admin_session', activeEmail);
           setFailedAttempts(0);
           localStorage.removeItem('kb_admin_lockout');
         }
       } catch (err: any) {
-        setAuthError('Ocurrió un error de conexión con Supabase.');
+        setAuthError(`Ocurrió un error de conexión con Supabase: ${err?.message || 'desconocido'}.`);
       } finally {
         setAuthLoading(false);
       }
@@ -1053,7 +1059,7 @@ export default function AdminPage() {
                 {isMock ? 'Usuario o correo' : 'Correo electrónico'}
               </label>
               <input
-                type="text"
+                type={isMock ? 'text' : 'email'}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={isMock ? 'admin' : 'admin@restaurante.com'}

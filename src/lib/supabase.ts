@@ -1,8 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || '';
+const demoModeEnv = process.env.NEXT_PUBLIC_DEMO_MODE?.trim().toLowerCase();
 const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
+const demoModeEnabled =
+  demoModeEnv === 'true' || (!hasSupabaseConfig && demoModeEnv !== 'false');
 
 const supabaseConfigError = new Error(
   'Supabase credentials are missing. Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to enable database features.'
@@ -62,8 +65,8 @@ const fallbackSupabase = {
   },
 };
 
-// Fallback message to prevent hard crashes when supabase credentials are not set up yet
-if (!hasSupabaseConfig) {
+// Fallback message to prevent hard crashes when Supabase credentials are not set up yet.
+if (!hasSupabaseConfig && demoModeEnabled) {
   if (typeof window !== 'undefined') {
     console.warn(
       "Supabase credentials are missing. The website is currently running in fallback 'Mock Mode'. Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your env file to connect database features."
@@ -73,6 +76,10 @@ if (!hasSupabaseConfig) {
       "\x1b[33m[Supabase Warning] Credentials missing. Running in Mock fallback mode. Please configure environment variables.\x1b[0m"
     );
   }
+} else if (!hasSupabaseConfig) {
+  console.warn(
+    "\x1b[33m[Supabase Warning] Credentials missing and demo mode is disabled. Supabase features will fail until NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are configured.\x1b[0m"
+  );
 }
 
 export const supabase = hasSupabaseConfig
@@ -80,3 +87,4 @@ export const supabase = hasSupabaseConfig
   : (fallbackSupabase as typeof fallbackSupabase & Record<string, any>);
 
 export const isSupabaseConfigured = hasSupabaseConfig;
+export const isDemoModeEnabled = demoModeEnabled;

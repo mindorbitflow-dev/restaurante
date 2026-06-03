@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { isDemoModeEnabled, isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { BusinessProfile, Category, Product, Event, GalleryImage, Testimonial } from '@/lib/types';
 import {
   mockBusinessProfile,
@@ -26,6 +26,19 @@ interface BusinessContextType {
 
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
 
+function parseJsonField<T>(value: T | string | null | undefined, fallback: T): T {
+  if (typeof value !== 'string') {
+    return value || fallback;
+  }
+
+  try {
+    return JSON.parse(value) as T;
+  } catch (error) {
+    console.error('Failed to parse Supabase JSON field:', error);
+    return fallback;
+  }
+}
+
 export function BusinessProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<BusinessProfile>(mockBusinessProfile);
   const [categories, setCategories] = useState<Category[]>(mockCategories);
@@ -34,105 +47,110 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
   const [gallery, setGallery] = useState<GalleryImage[]>(mockGallery);
   const [testimonials, setTestimonials] = useState<Testimonial[]>(mockTestimonials);
   const [loading, setLoading] = useState<boolean>(true);
-  const [isMock, setIsMock] = useState<boolean>(true);
+  const [isMock, setIsMock] = useState<boolean>(isDemoModeEnabled);
 
   const refreshData = useCallback(async () => {
     setLoading(true);
     try {
+      if (isDemoModeEnabled || !isSupabaseConfigured) {
+        setProfile(mockBusinessProfile);
+        setCategories(mockCategories);
+        setProducts(mockProducts);
+        setEvents(mockEvents);
+        setGallery(mockGallery);
+        setTestimonials(mockTestimonials);
+        setIsMock(true);
+        return;
+      }
+
+      setIsMock(false);
+
       // 1. Fetch Business Profile
       const { data: profileData, error: profileErr } = await supabase
         .from('business_profile')
         .select('*')
         .maybeSingle();
 
-      // If business profile is available, we are successfully fetching from a valid Supabase instance
-      if (profileData && !profileErr) {
-        setProfile({
-          ...mockBusinessProfile, // Fallback fields
-          ...profileData,
-          working_hours: typeof profileData.working_hours === 'string' 
-            ? JSON.parse(profileData.working_hours) 
-            : (profileData.working_hours || mockBusinessProfile.working_hours),
-          social_links: typeof profileData.social_links === 'string'
-            ? JSON.parse(profileData.social_links)
-            : (profileData.social_links || mockBusinessProfile.social_links),
-          theme_colors: typeof profileData.theme_colors === 'string'
-            ? JSON.parse(profileData.theme_colors)
-            : (profileData.theme_colors || mockBusinessProfile.theme_colors),
-          seo_metadata: typeof profileData.seo_metadata === 'string'
-            ? JSON.parse(profileData.seo_metadata)
-            : (profileData.seo_metadata || mockBusinessProfile.seo_metadata),
-        });
-        setIsMock(false);
-      } else {
-        // Fall back to mock
-        setProfile(mockBusinessProfile);
-        setIsMock(true);
+      if (profileErr) {
+        throw profileErr;
       }
 
-      // If we are not in Mock mode, load other data from Supabase
-      if (profileData && !profileErr) {
-        // 2. Fetch Categories
-        const { data: catData, error: catErr } = await supabase
-          .from('categories')
-          .select('*')
-          .order('order_index', { ascending: true });
-        if (catData && !catErr) setCategories(catData);
-
-        // 3. Fetch Products (filter out soft-deleted items)
-        const { data: prodData, error: prodErr } = await supabase
-          .from('products')
-          .select('*')
-          .is('deleted_at', null)
-          .order('order_index', { ascending: true });
-        if (prodData && !prodErr) {
-          // Parse numerical prices in case they come as strings
-          const formattedProds = prodData.map((p) => ({
-            ...p,
-            price: Number(p.price),
-            original_price: p.original_price ? Number(p.original_price) : undefined,
-          }));
-          setProducts(formattedProds);
-        }
-
-        // 4. Fetch Events (filter out soft-deleted events)
-        const { data: evtData, error: evtErr } = await supabase
-          .from('events')
-          .select('*')
-          .is('deleted_at', null)
-          .order('event_date', { ascending: true });
-        if (evtData && !evtErr) setEvents(evtData);
-
-        // 5. Fetch Gallery
-        const { data: galData, error: galErr } = await supabase
-          .from('gallery')
-          .select('*')
-          .order('order_index', { ascending: true });
-        if (galData && !galErr) setGallery(galData);
-
-        // 6. Fetch Testimonials
-        const { data: testData, error: testErr } = await supabase
-          .from('testimonials')
-          .select('*')
-          .eq('is_active', true);
-        if (testData && !testErr) setTestimonials(testData);
+      if (profileData) {
+        setProfile({
+          ...mockBusinessProfile,
+          ...profileData,
+          working_hours: parseJsonField(profileData.working_hours, mockBusinessProfile.working_hours),
+          social_links: parseJsonField(profileData.social_links, mockBusinessProfile.social_links),
+          theme_colors: parseJsonField(profileData.theme_colors, mockBusinessProfile.theme_colors),
+          seo_metadata: parseJsonField(profileData.seo_metadata, mockBusinessProfile.seo_metadata),
+        });
       } else {
-        // Fallback all lists to mock
+        console.warn(
+          'Supabase is configured, but business_profile has no rows. Run supabase_schema.sql or insert one business profile row.'
+        );
+        setProfile(mockBusinessProfile);
+      }
+
+      // 2. Fetch Categories
+      const { data: catData, error: catErr } = await supabase
+        .from('categories')
+        .select('*')
+        .order('order_index', { ascending: true });
+      if (catErr) throw catErr;
+      setCategories(catData || []);
+
+      // 3. Fetch Products (filter out soft-deleted items)
+      const { data: prodData, error: prodErr } = await supabase
+        .from('products')
+        .select('*')
+        .is('deleted_at', null)
+        .order('order_index', { ascending: true });
+      if (prodErr) throw prodErr;
+      const formattedProds = (prodData || []).map((p) => ({
+        ...p,
+        price: Number(p.price),
+        original_price: p.original_price ? Number(p.original_price) : undefined,
+      }));
+      setProducts(formattedProds);
+
+      // 4. Fetch Events (filter out soft-deleted events)
+      const { data: evtData, error: evtErr } = await supabase
+        .from('events')
+        .select('*')
+        .is('deleted_at', null)
+        .order('event_date', { ascending: true });
+      if (evtErr) throw evtErr;
+      setEvents(evtData || []);
+
+      // 5. Fetch Gallery
+      const { data: galData, error: galErr } = await supabase
+        .from('gallery')
+        .select('*')
+        .order('order_index', { ascending: true });
+      if (galErr) throw galErr;
+      setGallery(galData || []);
+
+      // 6. Fetch Testimonials
+      const { data: testData, error: testErr } = await supabase
+        .from('testimonials')
+        .select('*')
+        .eq('is_active', true);
+      if (testErr) throw testErr;
+      setTestimonials(testData || []);
+    } catch (err) {
+      console.error('Error fetching data from Supabase:', err);
+
+      if (isDemoModeEnabled || !isSupabaseConfigured) {
+        setProfile(mockBusinessProfile);
         setCategories(mockCategories);
         setProducts(mockProducts);
         setEvents(mockEvents);
         setGallery(mockGallery);
         setTestimonials(mockTestimonials);
+        setIsMock(true);
+      } else {
+        setIsMock(false);
       }
-    } catch (err) {
-      console.error('Error fetching data from Supabase, using mock fallback data:', err);
-      setProfile(mockBusinessProfile);
-      setCategories(mockCategories);
-      setProducts(mockProducts);
-      setEvents(mockEvents);
-      setGallery(mockGallery);
-      setTestimonials(mockTestimonials);
-      setIsMock(true);
     } finally {
       setLoading(false);
     }

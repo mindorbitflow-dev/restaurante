@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { 
@@ -1068,7 +1068,7 @@ export default function AdminPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="⬢⬢⬢⬢⬢⬢⬢⬢"
+                placeholder="••••••••"
                 className="w-full bg-black/40 border border-white/10 focus:border-gold/50 rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition-colors"
               />
             </div>
@@ -1269,7 +1269,7 @@ export default function AdminPage() {
             {/* Quick reservations summary list */}
             <div className="p-6 sm:p-8 rounded-2xl bg-white/5 border border-white/5 shadow-xl">
               <h3 className="font-serif text-white text-lg font-bold tracking-wide mb-6 flex items-center justify-between">
-                <span>�altimas Solicitudes de Reservas</span>
+                <span>Últimas Solicitudes de Reservas</span>
                 <button 
                   onClick={() => setActiveTab('reservations')} 
                   className="text-xs text-gold hover:underline font-sans uppercase tracking-wider"
@@ -1294,7 +1294,7 @@ export default function AdminPage() {
                     {reservations.slice(0, 5).map((res) => (
                       <tr key={res.id} className="border-b border-white/5 text-gray-300 hover:bg-white/5 transition-colors">
                         <td className="py-4 pr-4 font-semibold text-white">{res.customer_name}</td>
-                        <td className="py-4 pr-4 font-serif text-xs">{res.reservation_date} ⬢ {res.reservation_time}</td>
+                        <td className="py-4 pr-4 font-serif text-xs">{res.reservation_date} • {res.reservation_time}</td>
                         <td className="py-4 pr-4 text-center font-bold text-white">{res.num_people}</td>
                         <td className="py-4 pr-4 text-xs italic max-w-xs truncate text-gray-500">{res.comments || 'Sin comentarios'}</td>
                         <td className="py-4 pr-4 text-center">
@@ -2142,7 +2142,7 @@ export default function AdminPage() {
                                   : 'bg-amber-950/30 text-amber-500 border border-amber-500/20'
                               }`}>
                                 <AlertTriangle className="w-3 h-3" />
-                                {daysLeft <= 1 ? '�altimo día' : `Quedan ${daysLeft} días`}
+                                {daysLeft <= 1 ? 'Último día' : `Quedan ${daysLeft} días`}
                               </span>
                             </td>
                             <td className="py-3 text-right">
@@ -2205,7 +2205,7 @@ export default function AdminPage() {
                                   : 'bg-amber-950/30 text-amber-500 border border-amber-500/20'
                               }`}>
                                 <AlertTriangle className="w-3 h-3" />
-                                {daysLeft <= 1 ? '�altimo día' : `Quedan ${daysLeft} días`}
+                                {daysLeft <= 1 ? 'Último día' : `Quedan ${daysLeft} días`}
                               </span>
                             </td>
                             <td className="py-3 text-right">
@@ -2369,6 +2369,3 @@ export default function AdminPage() {
     </div>
   );
 }
-
-
-

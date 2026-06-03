@@ -43,3 +43,6 @@ next-env.d.ts
 
 #base de datos
 .supabase_schema.sql
+
+#production 
+.PRODUCTION.md

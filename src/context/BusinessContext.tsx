@@ -69,6 +69,8 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
       const { data: profileData, error: profileErr } = await supabase
         .from('business_profile')
         .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (profileErr) {
@@ -97,7 +99,9 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .order('order_index', { ascending: true });
       if (catErr) throw catErr;
-      setCategories(catData || []);
+      if (catData && catData.length > 0) {
+        setCategories(catData);
+      }
 
       // 3. Fetch Products (filter out soft-deleted items)
       const { data: prodData, error: prodErr } = await supabase
@@ -106,12 +110,14 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         .is('deleted_at', null)
         .order('order_index', { ascending: true });
       if (prodErr) throw prodErr;
-      const formattedProds = (prodData || []).map((p) => ({
-        ...p,
-        price: Number(p.price),
-        original_price: p.original_price ? Number(p.original_price) : undefined,
-      }));
-      setProducts(formattedProds);
+      if (prodData && prodData.length > 0) {
+        const formattedProds = prodData.map((p) => ({
+          ...p,
+          price: Number(p.price),
+          original_price: p.original_price ? Number(p.original_price) : undefined,
+        }));
+        setProducts(formattedProds);
+      }
 
       // 4. Fetch Events (filter out soft-deleted events)
       const { data: evtData, error: evtErr } = await supabase
@@ -120,7 +126,9 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         .is('deleted_at', null)
         .order('event_date', { ascending: true });
       if (evtErr) throw evtErr;
-      setEvents(evtData || []);
+      if (evtData && evtData.length > 0) {
+        setEvents(evtData);
+      }
 
       // 5. Fetch Gallery
       const { data: galData, error: galErr } = await supabase
@@ -128,7 +136,9 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .order('order_index', { ascending: true });
       if (galErr) throw galErr;
-      setGallery(galData || []);
+      if (galData && galData.length > 0) {
+        setGallery(galData);
+      }
 
       // 6. Fetch Testimonials
       const { data: testData, error: testErr } = await supabase
@@ -136,7 +146,9 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .eq('is_active', true);
       if (testErr) throw testErr;
-      setTestimonials(testData || []);
+      if (testData && testData.length > 0) {
+        setTestimonials(testData);
+      }
     } catch (err) {
       console.error('Error fetching data from Supabase:', err);
 

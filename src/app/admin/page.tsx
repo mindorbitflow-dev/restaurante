@@ -480,6 +480,50 @@ export default function AdminPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (isMock) return;
+
+    let isMounted = true;
+
+    const syncSupabaseSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      const activeEmail = data.session?.user.email;
+
+      if (!isMounted) return;
+
+      if (error || !activeEmail) {
+        localStorage.removeItem('kb_admin_session');
+        setIsAuthenticated(false);
+        setCurrentUserEmail('');
+      } else {
+        setIsAuthenticated(true);
+        setCurrentUserEmail(activeEmail);
+        localStorage.setItem('kb_admin_session', activeEmail);
+      }
+    };
+
+    syncSupabaseSession();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const activeEmail = session?.user.email;
+
+      if (activeEmail) {
+        setIsAuthenticated(true);
+        setCurrentUserEmail(activeEmail);
+        localStorage.setItem('kb_admin_session', activeEmail);
+      } else {
+        setIsAuthenticated(false);
+        setCurrentUserEmail('');
+        localStorage.removeItem('kb_admin_session');
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      authListener.subscription.unsubscribe();
+    };
+  }, [isMock]);
+
   // Intervalo del contador del bloqueo
   useEffect(() => {
     if (lockoutTime) {

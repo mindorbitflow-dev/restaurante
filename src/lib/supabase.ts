@@ -18,6 +18,7 @@ type SupabaseLikeQuery = {
   eq: (...args: any[]) => SupabaseLikeQuery;
   not: (...args: any[]) => SupabaseLikeQuery;
   lt: (...args: any[]) => SupabaseLikeQuery;
+  limit: (...args: any[]) => SupabaseLikeQuery;
   maybeSingle: () => SupabaseLikeQuery;
   insert: (...args: any[]) => SupabaseLikeQuery;
   update: (...args: any[]) => SupabaseLikeQuery;
@@ -38,6 +39,7 @@ function createSupabaseFallbackQuery(): SupabaseLikeQuery {
     eq: () => query,
     not: () => query,
     lt: () => query,
+    limit: () => query,
     maybeSingle: () => query,
     insert: () => query,
     update: () => query,
@@ -61,6 +63,17 @@ const fallbackSupabase = {
     updateUser: async () => ({
       data: { user: null },
       error: supabaseConfigError,
+    }),
+    getSession: async () => ({
+      data: { session: null },
+      error: supabaseConfigError,
+    }),
+    onAuthStateChange: () => ({
+      data: {
+        subscription: {
+          unsubscribe: () => {},
+        },
+      },
     }),
   },
 };

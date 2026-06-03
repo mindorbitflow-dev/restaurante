@@ -6,6 +6,8 @@
 2. Abre `SQL Editor` y ejecuta completo el archivo `supabase_schema.sql`.
 3. Verifica que exista al menos una fila en `business_profile`.
 4. En `Authentication > Users`, crea el usuario administrador que usaras para `/admin`.
+5. Si activaste RLS manualmente, vuelve a ejecutar el script para crear las policies.
+6. Si el panel muestra `403 Forbidden` al crear/editar registros, ejecuta `supabase_rls_policies.sql`.
 
 ## 2. Variables de entorno en Render
 
@@ -48,3 +50,5 @@ Revisa estos puntos:
 3. Hiciste un redeploy despues de cambiar variables `NEXT_PUBLIC_*`.
 4. La tabla `business_profile` existe y tiene una fila.
 5. Las tablas creadas por `supabase_schema.sql` existen en el mismo proyecto de Supabase usado por Render.
+6. Si ves `401` o `403` en `/rest/v1/...`, el problema suele ser RLS sin policies, no la URL.
+7. Si Supabase esta conectado pero las listas salen vacias, ejecuta las semillas de `supabase_schema.sql` para crear una base inicial de demostracion en la base real.

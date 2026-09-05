@@ -22,6 +22,11 @@ interface BusinessContextType {
   loading: boolean;
   isMock: boolean;
   refreshData: () => Promise<void>;
+  saveMockProducts: (newProducts: Product[]) => void;
+  saveMockCategories: (newCategories: Category[]) => void;
+  saveMockEvents: (newEvents: Event[]) => void;
+  saveMockProfile: (newProfile: BusinessProfile) => void;
+  resetDemoData: () => void;
 }
 
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
@@ -40,23 +45,132 @@ function parseJsonField<T>(value: T | string | null | undefined, fallback: T): T
 }
 
 export function BusinessProvider({ children }: { children: React.ReactNode }) {
-  const [profile, setProfile] = useState<BusinessProfile>(mockBusinessProfile);
-  const [categories, setCategories] = useState<Category[]>(mockCategories);
-  const [products, setProducts] = useState<Product[]>(mockProducts);
-  const [events, setEvents] = useState<Event[]>(mockEvents);
+  const [profile, setProfile] = useState<BusinessProfile>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('demo_profile');
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return mockBusinessProfile;
+  });
+
+  const [categories, setCategories] = useState<Category[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('demo_categories');
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return mockCategories;
+  });
+
+  const [products, setProducts] = useState<Product[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('demo_products');
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return mockProducts;
+  });
+
+  const [events, setEvents] = useState<Event[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('demo_events');
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return mockEvents;
+  });
+
   const [gallery, setGallery] = useState<GalleryImage[]>(mockGallery);
   const [testimonials, setTestimonials] = useState<Testimonial[]>(mockTestimonials);
   const [loading, setLoading] = useState<boolean>(true);
   const [isMock, setIsMock] = useState<boolean>(isDemoModeEnabled);
 
+  const saveMockProducts = useCallback((newProducts: Product[]) => {
+    setProducts(newProducts);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('demo_products', JSON.stringify(newProducts));
+    }
+  }, []);
+
+  const saveMockCategories = useCallback((newCategories: Category[]) => {
+    setCategories(newCategories);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('demo_categories', JSON.stringify(newCategories));
+    }
+  }, []);
+
+  const saveMockEvents = useCallback((newEvents: Event[]) => {
+    setEvents(newEvents);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('demo_events', JSON.stringify(newEvents));
+    }
+  }, []);
+
+  const saveMockProfile = useCallback((newProfile: BusinessProfile) => {
+    setProfile(newProfile);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('demo_profile', JSON.stringify(newProfile));
+    }
+  }, []);
+
+  const resetDemoData = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('demo_products');
+      localStorage.removeItem('demo_categories');
+      localStorage.removeItem('demo_events');
+      localStorage.removeItem('demo_profile');
+      localStorage.removeItem('demo_deleted_products');
+      localStorage.removeItem('demo_deleted_events');
+    }
+    setProfile(mockBusinessProfile);
+    setCategories(mockCategories);
+    setProducts(mockProducts);
+    setEvents(mockEvents);
+  }, []);
+
   const refreshData = useCallback(async () => {
     setLoading(true);
     try {
       if (isDemoModeEnabled || !isSupabaseConfigured) {
-        setProfile(mockBusinessProfile);
-        setCategories(mockCategories);
-        setProducts(mockProducts);
-        setEvents(mockEvents);
+        if (typeof window !== 'undefined') {
+          const savedProds = localStorage.getItem('demo_products');
+          if (savedProds) {
+            try { setProducts(JSON.parse(savedProds)); } catch {}
+          } else {
+            setProducts(mockProducts);
+          }
+
+          const savedCats = localStorage.getItem('demo_categories');
+          if (savedCats) {
+            try { setCategories(JSON.parse(savedCats)); } catch {}
+          } else {
+            setCategories(mockCategories);
+          }
+
+          const savedEvts = localStorage.getItem('demo_events');
+          if (savedEvts) {
+            try { setEvents(JSON.parse(savedEvts)); } catch {}
+          } else {
+            setEvents(mockEvents);
+          }
+
+          const savedProf = localStorage.getItem('demo_profile');
+          if (savedProf) {
+            try { setProfile(JSON.parse(savedProf)); } catch {}
+          } else {
+            setProfile(mockBusinessProfile);
+          }
+        } else {
+          setProfile(mockBusinessProfile);
+          setCategories(mockCategories);
+          setProducts(mockProducts);
+          setEvents(mockEvents);
+        }
         setGallery(mockGallery);
         setTestimonials(mockTestimonials);
         setIsMock(true);
@@ -99,7 +213,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .order('order_index', { ascending: true });
       if (catErr) throw catErr;
-      if (catData && catData.length > 0) {
+      if (catData) {
         setCategories(catData);
       }
 
@@ -110,7 +224,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         .is('deleted_at', null)
         .order('order_index', { ascending: true });
       if (prodErr) throw prodErr;
-      if (prodData && prodData.length > 0) {
+      if (prodData) {
         const formattedProds = prodData.map((p) => ({
           ...p,
           price: Number(p.price),
@@ -126,7 +240,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         .is('deleted_at', null)
         .order('event_date', { ascending: true });
       if (evtErr) throw evtErr;
-      if (evtData && evtData.length > 0) {
+      if (evtData) {
         setEvents(evtData);
       }
 
@@ -136,7 +250,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .order('order_index', { ascending: true });
       if (galErr) throw galErr;
-      if (galData && galData.length > 0) {
+      if (galData) {
         setGallery(galData);
       }
 
@@ -146,7 +260,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .eq('is_active', true);
       if (testErr) throw testErr;
-      if (testData && testData.length > 0) {
+      if (testData) {
         setTestimonials(testData);
       }
     } catch (err) {
@@ -184,6 +298,11 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         loading,
         isMock,
         refreshData,
+        saveMockProducts,
+        saveMockCategories,
+        saveMockEvents,
+        saveMockProfile,
+        resetDemoData,
       }}
     >
       {children}

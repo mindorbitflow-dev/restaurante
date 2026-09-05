@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: restaurante-app
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: NEXT_PUBLIC_DEMO_MODE
+        value: "true"
+      # Descomenta y configura si deseas conectar Supabase en Render:
+      # - key: NEXT_PUBLIC_SUPABASE_URL
+      #   sync: false
+      # - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+      #   sync: false

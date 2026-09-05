@@ -13,7 +13,8 @@ import { Product, Category, Reservation, BusinessProfile, Event } from '@/lib/ty
 export default function AdminPage() {
   const { 
     profile, categories, products, events, testimonials, gallery, 
-    isMock, refreshData 
+    isMock, refreshData,
+    saveMockProducts, saveMockCategories, saveMockEvents, saveMockProfile, resetDemoData
   } = useBusiness();
 
   // Authentication states
@@ -61,6 +62,14 @@ export default function AdminPage() {
   const [localCategories, setLocalCategories] = useState<Category[]>([]);
   const [localEvents, setLocalEvents] = useState<Event[]>([]);
   const [deletedProducts, setDeletedProducts] = useState<Product[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('demo_deleted_products');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {}
+      }
+    }
     // Inicializar mock de productos eliminados para pruebas en modo Demo
     const fiveDaysAgo = new Date();
     fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
@@ -98,6 +107,14 @@ export default function AdminPage() {
     ];
   });
   const [deletedEvents, setDeletedEvents] = useState<Event[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('demo_deleted_events');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {}
+      }
+    }
     // Inicializar mock de eventos eliminados para pruebas en modo Demo
     const eightDaysAgo = new Date();
     eightDaysAgo.setDate(eightDaysAgo.getDate() - 8);
@@ -193,7 +210,19 @@ export default function AdminPage() {
 
   // Cargar elementos eliminados (papelera) y procesar retención
   const loadDeletedItems = async () => {
-    if (isMock) return;
+    if (isMock) {
+      if (typeof window !== 'undefined') {
+        const savedProds = localStorage.getItem('demo_deleted_products');
+        if (savedProds) {
+          try { setDeletedProducts(JSON.parse(savedProds)); } catch (e) {}
+        }
+        const savedEvts = localStorage.getItem('demo_deleted_events');
+        if (savedEvts) {
+          try { setDeletedEvents(JSON.parse(savedEvts)); } catch (e) {}
+        }
+      }
+      return;
+    }
 
     try {
       const retentionDays = 30;
@@ -252,9 +281,15 @@ export default function AdminPage() {
   const handleRestoreProduct = async (prod: Product) => {
     try {
       if (isMock) {
-        setDeletedProducts(prev => prev.filter(p => p.id !== prod.id));
+        const nextDeleted = deletedProducts.filter(p => p.id !== prod.id);
+        setDeletedProducts(nextDeleted);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('demo_deleted_products', JSON.stringify(nextDeleted));
+        }
         const restored: Product = { ...prod, deleted_at: undefined };
-        setLocalProducts(prev => [...prev, restored]);
+        const nextProds = [...localProducts, restored];
+        setLocalProducts(nextProds);
+        saveMockProducts(nextProds);
       } else {
         const { error } = await supabase
           .from('products')
@@ -272,9 +307,15 @@ export default function AdminPage() {
   const handleRestoreEvent = async (evt: Event) => {
     try {
       if (isMock) {
-        setDeletedEvents(prev => prev.filter(e => e.id !== evt.id));
+        const nextDeleted = deletedEvents.filter(e => e.id !== evt.id);
+        setDeletedEvents(nextDeleted);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('demo_deleted_events', JSON.stringify(nextDeleted));
+        }
         const restored: Event = { ...evt, deleted_at: undefined };
-        setLocalEvents(prev => [...prev, restored]);
+        const nextEvts = [...localEvents, restored];
+        setLocalEvents(nextEvts);
+        saveMockEvents(nextEvts);
       } else {
         const { error } = await supabase
           .from('events')
@@ -293,7 +334,11 @@ export default function AdminPage() {
     if (!confirm('¿Estás seguro de eliminar permanentemente este producto? Esta acción no se puede deshacer.')) return;
     try {
       if (isMock) {
-        setDeletedProducts(prev => prev.filter(p => p.id !== id));
+        const nextDeleted = deletedProducts.filter(p => p.id !== id);
+        setDeletedProducts(nextDeleted);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('demo_deleted_products', JSON.stringify(nextDeleted));
+        }
       } else {
         const { error } = await supabase
           .from('products')
@@ -311,7 +356,11 @@ export default function AdminPage() {
     if (!confirm('¿Estás seguro de eliminar permanentemente este evento? Esta acción no se puede deshacer.')) return;
     try {
       if (isMock) {
-        setDeletedEvents(prev => prev.filter(e => e.id !== id));
+        const nextDeleted = deletedEvents.filter(e => e.id !== id);
+        setDeletedEvents(nextDeleted);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('demo_deleted_events', JSON.stringify(nextDeleted));
+        }
       } else {
         const { error } = await supabase
           .from('events')
@@ -331,6 +380,10 @@ export default function AdminPage() {
       if (isMock) {
         setDeletedProducts([]);
         setDeletedEvents([]);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('demo_deleted_products');
+          localStorage.removeItem('demo_deleted_events');
+        }
       } else {
         const { error: prodErr } = await supabase
           .from('products')
@@ -576,9 +629,10 @@ export default function AdminPage() {
 
     try {
       if (isMock) {
+        let updatedProds: Product[] = [];
         if (editingProduct) {
           // Edit local mock state
-          setLocalProducts(prev => prev.map(p => p.id === editingProduct.id ? {
+          updatedProds = localProducts.map(p => p.id === editingProduct.id ? {
             ...p,
             name: productForm.name.trim(),
             description: productForm.description.trim(),
@@ -589,7 +643,7 @@ export default function AdminPage() {
             tags: pTags,
             is_available: productForm.is_available,
             is_promotion: productForm.is_promotion
-          } : p));
+          } : p);
         } else {
           // Add local mock state
           const newProd: Product = {
@@ -605,8 +659,10 @@ export default function AdminPage() {
             is_promotion: productForm.is_promotion,
             order_index: localProducts.length + 1
           };
-          setLocalProducts(prev => [...prev, newProd]);
+          updatedProds = [...localProducts, newProd];
         }
+        setLocalProducts(updatedProds);
+        saveMockProducts(updatedProds);
       } else {
         // Supabase DB query
         if (editingProduct) {
@@ -680,8 +736,14 @@ export default function AdminPage() {
         const prod = localProducts.find(p => p.id === id);
         if (prod) {
           const softDeleted: Product = { ...prod, deleted_at: new Date().toISOString() };
-          setDeletedProducts(prev => [softDeleted, ...prev]);
-          setLocalProducts(prev => prev.filter(p => p.id !== id));
+          const nextDeleted = [softDeleted, ...deletedProducts];
+          setDeletedProducts(nextDeleted);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('demo_deleted_products', JSON.stringify(nextDeleted));
+          }
+          const updatedProds = localProducts.filter(p => p.id !== id);
+          setLocalProducts(updatedProds);
+          saveMockProducts(updatedProds);
         }
       } else {
         const { error } = await supabase
@@ -701,7 +763,9 @@ export default function AdminPage() {
     try {
       const nextAvail = !prod.is_available;
       if (isMock) {
-        setLocalProducts(prev => prev.map(p => p.id === prod.id ? { ...p, is_available: nextAvail } : p));
+        const updatedProds = localProducts.map(p => p.id === prod.id ? { ...p, is_available: nextAvail } : p);
+        setLocalProducts(updatedProds);
+        saveMockProducts(updatedProds);
       } else {
         const { error } = await supabase
           .from('products')
@@ -727,13 +791,14 @@ export default function AdminPage() {
 
     try {
       if (isMock) {
+        let updatedCats: Category[] = [];
         if (editingCategory) {
-          setLocalCategories(prev => prev.map(c => c.id === editingCategory.id ? {
+          updatedCats = localCategories.map(c => c.id === editingCategory.id ? {
             ...c,
             name: categoryForm.name.trim(),
             slug: categoryForm.slug.trim().toLowerCase(),
             order_index: Number(categoryForm.order_index)
-          } : c));
+          } : c);
         } else {
           const newCat: Category = {
             id: `cat-${Date.now()}`,
@@ -742,8 +807,10 @@ export default function AdminPage() {
             order_index: Number(categoryForm.order_index) || localCategories.length + 1,
             is_active: true
           };
-          setLocalCategories(prev => [...prev, newCat]);
+          updatedCats = [...localCategories, newCat];
         }
+        setLocalCategories(updatedCats);
+        saveMockCategories(updatedCats);
       } else {
         if (editingCategory) {
           const { error } = await supabase
@@ -790,7 +857,9 @@ export default function AdminPage() {
     if (!confirm('¿Estás seguro de eliminar esta categoría?')) return;
     try {
       if (isMock) {
-        setLocalCategories(prev => prev.filter(c => c.id !== id));
+        const updatedCats = localCategories.filter(c => c.id !== id);
+        setLocalCategories(updatedCats);
+        saveMockCategories(updatedCats);
       } else {
         const { error } = await supabase.from('categories').delete().eq('id', id);
         if (error) throw error;
@@ -833,15 +902,16 @@ export default function AdminPage() {
 
     try {
       if (isMock) {
+        let updatedEvts: Event[] = [];
         if (editingEvent) {
-          setLocalEvents(prev => prev.map(evt => evt.id === editingEvent.id ? {
+          updatedEvts = localEvents.map(evt => evt.id === editingEvent.id ? {
             ...evt,
             title: eventForm.title.trim(),
             description: eventForm.description.trim(),
             event_date: eventForm.event_date,
             image_url: eventForm.image_url.trim() || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80',
             is_active: eventForm.is_active
-          } : evt));
+          } : evt);
         } else {
           const newEvt: Event = {
             id: `evt-${Date.now()}`,
@@ -851,8 +921,10 @@ export default function AdminPage() {
             image_url: eventForm.image_url.trim() || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80',
             is_active: eventForm.is_active
           };
-          setLocalEvents(prev => [...prev, newEvt]);
+          updatedEvts = [...localEvents, newEvt];
         }
+        setLocalEvents(updatedEvts);
+        saveMockEvents(updatedEvts);
       } else {
         if (editingEvent) {
           const { error } = await supabase
@@ -915,8 +987,14 @@ export default function AdminPage() {
         const evt = localEvents.find(e => e.id === id);
         if (evt) {
           const softDeleted: Event = { ...evt, deleted_at: new Date().toISOString() };
-          setDeletedEvents(prev => [softDeleted, ...prev]);
-          setLocalEvents(prev => prev.filter(e => e.id !== id));
+          const nextDeleted = [softDeleted, ...deletedEvents];
+          setDeletedEvents(nextDeleted);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('demo_deleted_events', JSON.stringify(nextDeleted));
+          }
+          const updatedEvts = localEvents.filter(e => e.id !== id);
+          setLocalEvents(updatedEvts);
+          saveMockEvents(updatedEvts);
         }
       } else {
         const { error } = await supabase
@@ -936,7 +1014,9 @@ export default function AdminPage() {
     try {
       const nextActive = !evt.is_active;
       if (isMock) {
-        setLocalEvents(prev => prev.map(e => e.id === evt.id ? { ...e, is_active: nextActive } : e));
+        const updatedEvts = localEvents.map(e => e.id === evt.id ? { ...e, is_active: nextActive } : e);
+        setLocalEvents(updatedEvts);
+        saveMockEvents(updatedEvts);
       } else {
         const { error } = await supabase
           .from('events')
@@ -960,6 +1040,7 @@ export default function AdminPage() {
     try {
       if (isMock) {
         // Mock save
+        saveMockProfile(settingsForm);
         setSettingsSuccess(true);
         setTimeout(() => setSettingsSuccess(false), 3000);
       } else {
@@ -2403,10 +2484,25 @@ export default function AdminPage() {
 
               </div>
 
-              <div className="flex justify-end pt-6 border-t border-white/5">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 pt-6 border-t border-white/5">
+                {isMock && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm('¿Deseas restablecer todos los productos, eventos y categorías a sus valores iniciales de demostración?')) {
+                        resetDemoData();
+                        alert('¡Datos de demostración restablecidos correctamente!');
+                      }
+                    }}
+                    className="flex items-center gap-2 px-5 py-3 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-semibold uppercase tracking-wider transition-all duration-200"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Restablecer Datos Demo
+                  </button>
+                )}
                 <button
                   type="submit"
-                  className="px-8 py-4 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-display text-xs uppercase tracking-widest font-bold hover:shadow-[0_0_20px_rgba(212,175,55,0.35)] transition-all duration-300"
+                  className="px-8 py-4 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-display text-xs uppercase tracking-widest font-bold hover:shadow-[0_0_20px_rgba(212,175,55,0.35)] transition-all duration-300 sm:ml-auto"
                 >
                   Guardar Cambios del Perfil
                 </button>

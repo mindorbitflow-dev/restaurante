@@ -13,6 +13,9 @@ CREATE TABLE IF NOT EXISTS business_profile (
     logo_url TEXT,
     about_text TEXT,
     about_image TEXT,
+    about_image_2 TEXT,
+    about_image_3 TEXT,
+    about_image_4 TEXT,
     whatsapp_number VARCHAR(50) NOT NULL,
     address TEXT NOT NULL,
     google_maps_embed TEXT,
@@ -22,6 +25,11 @@ CREATE TABLE IF NOT EXISTS business_profile (
     seo_metadata JSONB NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Asegurar columnas si la tabla ya existía previamente
+ALTER TABLE business_profile ADD COLUMN IF NOT EXISTS about_image_2 TEXT;
+ALTER TABLE business_profile ADD COLUMN IF NOT EXISTS about_image_3 TEXT;
+ALTER TABLE business_profile ADD COLUMN IF NOT EXISTS about_image_4 TEXT;
 
 -- 2. CATEGORÍAS DEL MENÚ
 CREATE TABLE IF NOT EXISTS categories (
@@ -234,3 +242,12 @@ WITH CHECK (auth.role() = 'authenticated');
     ('Hamburguesa Gourmet de la Casa', '22222222-2222-2222-2222-222222222222', '200g de selecto corte de res Angus a la parrilla, queso cheddar madurado, tocineta crujiente, cebolla confitada al oporto y salsa secreta en pan brioche.', 45000, 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&fit=crop&q=80', ARRAY['Gourmet', 'Casa'], true, false, 1),
     ('Mojito Premium de Menta', '44444444-4444-4444-4444-444444444444', 'Ron Añejo, zumo fresco de lima ácida, hojas frescas de hierbabuena maceradas suavemente, soda y sirope simple.', 33000, 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&fit=crop&q=80', ARRAY['Clásico', 'Popular'], true, false, 1)
     ON CONFLICT DO NOTHING;
+
+    -- Inserción de Fotografías Iniciales de la Galería & Instalaciones
+    INSERT INTO gallery (image_url, caption, category, order_index) VALUES
+    ('https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=800', 'Gastronomía Fusión Premium', 'comida', 1),
+    ('https://images.unsplash.com/photo-1551024709-8f23befc6f87?q=80&w=800', 'Detalle de Repostería Fina', 'comida', 2),
+    ('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=800', 'Atmósfera Dorada de Nuestra Barra', 'bebidas', 3),
+    ('https://images.unsplash.com/photo-1574096079513-d8259312b7a3?q=80&w=800', 'Salas Lounge y Reservados VIP', 'lugar', 4)
+    ON CONFLICT DO NOTHING;
+

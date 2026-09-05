@@ -50,7 +50,7 @@ export default function About() {
                 className="w-full h-64 object-cover rounded-2xl border border-slate-800 shadow-xl hover:scale-105 transition-transform duration-500"
               />
               <img
-                src="https://images.unsplash.com/photo-1550547660-d9450f859349?w=600&fit=crop&q=80"
+                src={profile.about_image_2 || 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=600&fit=crop&q=80'}
                 alt="Papas y Hamburguesas"
                 className="w-full h-44 object-cover rounded-2xl border border-slate-800 shadow-xl hover:scale-105 transition-transform duration-500"
               />
@@ -58,12 +58,12 @@ export default function About() {
             
             <div className="space-y-4 pt-8">
               <img
-                src="https://images.unsplash.com/photo-1586190848861-99aa4a171e90?q=80&w=800"
+                src={profile.about_image_3 || 'https://images.unsplash.com/photo-1586190848861-99aa4a171e90?q=80&w=800'}
                 alt="Ambiente Restaurante"
                 className="w-full h-44 object-cover rounded-2xl border border-slate-800 shadow-xl hover:scale-105 transition-transform duration-500"
               />
               <img
-                src="https://images.unsplash.com/photo-1551782450-a2132b4ba21d?q=80&w=800"
+                src={profile.about_image_4 || 'https://images.unsplash.com/photo-1551782450-a2132b4ba21d?q=80&w=800'}
                 alt="Platos Especiales"
                 className="w-full h-64 object-cover rounded-2xl border border-slate-800 shadow-xl hover:scale-105 transition-transform duration-500"
               />

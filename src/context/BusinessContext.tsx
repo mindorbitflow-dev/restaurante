@@ -26,6 +26,7 @@ interface BusinessContextType {
   saveMockCategories: (newCategories: Category[]) => void;
   saveMockEvents: (newEvents: Event[]) => void;
   saveMockProfile: (newProfile: BusinessProfile) => void;
+  saveMockGallery: (newGallery: GalleryImage[]) => void;
   resetDemoData: () => void;
 }
 
@@ -85,7 +86,15 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
     return mockEvents;
   });
 
-  const [gallery, setGallery] = useState<GalleryImage[]>(mockGallery);
+  const [gallery, setGallery] = useState<GalleryImage[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('demo_gallery');
+      if (saved) {
+        try { return JSON.parse(saved); } catch {}
+      }
+    }
+    return mockGallery;
+  });
   const [testimonials, setTestimonials] = useState<Testimonial[]>(mockTestimonials);
   const [loading, setLoading] = useState<boolean>(true);
   const [isMock, setIsMock] = useState<boolean>(isDemoModeEnabled);
@@ -118,12 +127,20 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const saveMockGallery = useCallback((newGallery: GalleryImage[]) => {
+    setGallery(newGallery);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('demo_gallery', JSON.stringify(newGallery));
+    }
+  }, []);
+
   const resetDemoData = useCallback(() => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('demo_products');
       localStorage.removeItem('demo_categories');
       localStorage.removeItem('demo_events');
       localStorage.removeItem('demo_profile');
+      localStorage.removeItem('demo_gallery');
       localStorage.removeItem('demo_deleted_products');
       localStorage.removeItem('demo_deleted_events');
     }
@@ -131,6 +148,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
     setCategories(mockCategories);
     setProducts(mockProducts);
     setEvents(mockEvents);
+    setGallery(mockGallery);
   }, []);
 
   const refreshData = useCallback(async () => {
@@ -165,13 +183,20 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
           } else {
             setProfile(mockBusinessProfile);
           }
+
+          const savedGal = localStorage.getItem('demo_gallery');
+          if (savedGal) {
+            try { setGallery(JSON.parse(savedGal)); } catch {}
+          } else {
+            setGallery(mockGallery);
+          }
         } else {
           setProfile(mockBusinessProfile);
           setCategories(mockCategories);
           setProducts(mockProducts);
           setEvents(mockEvents);
+          setGallery(mockGallery);
         }
-        setGallery(mockGallery);
         setTestimonials(mockTestimonials);
         setIsMock(true);
         return;
@@ -192,13 +217,18 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (profileData) {
+        const rawSeo = parseJsonField(profileData.seo_metadata, mockBusinessProfile.seo_metadata);
         setProfile({
           ...mockBusinessProfile,
           ...profileData,
+          about_image: profileData.about_image || mockBusinessProfile.about_image,
+          about_image_2: profileData.about_image_2 || (rawSeo as any)?.about_image_2 || mockBusinessProfile.about_image_2,
+          about_image_3: profileData.about_image_3 || (rawSeo as any)?.about_image_3 || mockBusinessProfile.about_image_3,
+          about_image_4: profileData.about_image_4 || (rawSeo as any)?.about_image_4 || mockBusinessProfile.about_image_4,
           working_hours: parseJsonField(profileData.working_hours, mockBusinessProfile.working_hours),
           social_links: parseJsonField(profileData.social_links, mockBusinessProfile.social_links),
           theme_colors: parseJsonField(profileData.theme_colors, mockBusinessProfile.theme_colors),
-          seo_metadata: parseJsonField(profileData.seo_metadata, mockBusinessProfile.seo_metadata),
+          seo_metadata: rawSeo,
         });
       } else {
         console.warn(
@@ -302,6 +332,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
         saveMockCategories,
         saveMockEvents,
         saveMockProfile,
+        saveMockGallery,
         resetDemoData,
       }}
     >

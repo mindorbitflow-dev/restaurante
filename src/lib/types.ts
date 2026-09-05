@@ -5,6 +5,9 @@ export interface BusinessProfile {
   logo_url: string;
   about_text: string;
   about_image: string;
+  about_image_2?: string;
+  about_image_3?: string;
+  about_image_4?: string;
   whatsapp_number: string;
   address: string;
   google_maps_embed: string;

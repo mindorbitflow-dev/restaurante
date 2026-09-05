@@ -5,17 +5,17 @@ import {
   LayoutDashboard, Utensils, FolderHeart, CalendarCheck, Settings, 
   Plus, Edit, Trash2, Check, X, LogOut, ArrowRight, ShieldCheck,
   TrendingUp, Star, Phone, DollarSign, Calendar, RotateCcw, AlertTriangle,
-  CheckCircle2, AlertCircle, Loader2, Info
+  CheckCircle2, AlertCircle, Loader2, Info, Camera, Image as ImageIcon
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useBusiness } from '@/context/BusinessContext';
-import { Product, Category, Reservation, BusinessProfile, Event } from '@/lib/types';
+import { Product, Category, Reservation, BusinessProfile, Event, GalleryImage } from '@/lib/types';
 
 export default function AdminPage() {
   const { 
     profile, categories, products, events, testimonials, gallery, 
     isMock, refreshData,
-    saveMockProducts, saveMockCategories, saveMockEvents, saveMockProfile, resetDemoData
+    saveMockProducts, saveMockCategories, saveMockEvents, saveMockProfile, saveMockGallery, resetDemoData
   } = useBusiness();
 
   // Authentication states
@@ -56,9 +56,9 @@ export default function AdminPage() {
   const [passLoading, setPassLoading] = useState(false);
 
   // Dashboard Active Navigation Tab
-  const [activeTab, setActiveTab] = useState<'summary' | 'products' | 'categories' | 'reservations' | 'events' | 'recycle' | 'settings'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'products' | 'categories' | 'reservations' | 'events' | 'gallery' | 'recycle' | 'settings'>('summary');
 
-  const handleTabChange = (tab: 'summary' | 'products' | 'categories' | 'reservations' | 'events' | 'recycle' | 'settings') => {
+  const handleTabChange = (tab: 'summary' | 'products' | 'categories' | 'reservations' | 'events' | 'gallery' | 'recycle' | 'settings') => {
     setActiveTab(tab);
     if (typeof window !== 'undefined' && window.innerWidth < 768) {
       setTimeout(() => {
@@ -74,6 +74,7 @@ export default function AdminPage() {
   const [localProducts, setLocalProducts] = useState<Product[]>([]);
   const [localCategories, setLocalCategories] = useState<Category[]>([]);
   const [localEvents, setLocalEvents] = useState<Event[]>([]);
+  const [localGallery, setLocalGallery] = useState<GalleryImage[]>([]);
   const [deletedProducts, setDeletedProducts] = useState<Product[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('demo_deleted_products');
@@ -238,6 +239,19 @@ export default function AdminPage() {
     is_active: true
   });
 
+  // Gallery form state
+  const [editingGallery, setEditingGallery] = useState<GalleryImage | null>(null);
+  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
+  const [gallerySubmitting, setGallerySubmitting] = useState(false);
+  const [galleryFormError, setGalleryFormError] = useState('');
+  const [galleryCategoryFilter, setGalleryCategoryFilter] = useState('todas');
+  const [galleryForm, setGalleryForm] = useState({
+    image_url: '',
+    caption: '',
+    category: 'lugar',
+    order_index: 0
+  });
+
   // Settings form state
   const [settingsForm, setSettingsForm] = useState<BusinessProfile | null>(null);
   const [settingsSuccess, setSettingsSuccess] = useState(false);
@@ -248,10 +262,11 @@ export default function AdminPage() {
     setLocalProducts(products);
     setLocalCategories(categories);
     setLocalEvents(events);
+    setLocalGallery(gallery);
     if (profile) {
       setSettingsForm(profile);
     }
-  }, [products, categories, events, profile]);
+  }, [products, categories, events, gallery, profile]);
 
   // Fetch reservations from Supabase (or load mock reservations in Mock mode)
   const loadReservations = async () => {
@@ -563,9 +578,9 @@ export default function AdminPage() {
           setLockoutTime(lockTime);
           setSecondsRemaining(180);
           localStorage.setItem('admin_lockout', String(lockTime));
-          setAuthError('Tu cuenta ha sido bloqueada temporalmente por 3 minutos debido a 5 intentos fallidos de inicio de sesión.');
+          setAuthError('Acceso bloqueado temporalmente por 3 minutos debido a 5 intentos fallidos de inicio de sesión.');
         } else {
-          setAuthError(`Credenciales incorrectas. Intentos restantes antes de bloquear: ${5 - nextAttempts}.`);
+          setAuthError(`Usuario o contraseña incorrectos. (Intentos restantes: ${5 - nextAttempts})`);
         }
       }
       setAuthLoading(false);
@@ -591,17 +606,9 @@ export default function AdminPage() {
             setLockoutTime(lockTime);
             setSecondsRemaining(180);
             localStorage.setItem('kb_admin_lockout', String(lockTime));
-            setAuthError('Tu cuenta ha sido bloqueada temporalmente por 3 minutos debido a 5 intentos fallidos de inicio de sesión.');
+            setAuthError('Acceso bloqueado temporalmente por 3 minutos debido a 5 intentos fallidos de inicio de sesión.');
           } else {
-            let detail = error.message;
-            if (error.message.toLowerCase().includes('invalid login credentials')) {
-              detail = `Credenciales no válidas para "${resolvedEmail}". Recuerda que debes crear el usuario en Supabase (Authentication > Users o ejecutando el script supabase_admin_user.sql).`;
-            } else if (error.message.toLowerCase().includes('email not confirmed')) {
-              detail = `El correo "${resolvedEmail}" no ha sido confirmado en Supabase. En Supabase > Authentication > Users activa "Auto-confirm user".`;
-            } else if (error.message.toLowerCase().includes('database error querying schema')) {
-              detail = `Error de esquema en Supabase: campos de tokens en NULL. Ejecuta el script de corrección en supabase_admin_user.sql o elimina y vuelve a crear el usuario desde Authentication > Users.`;
-            }
-            setAuthError(`${detail} (Intentos restantes: ${5 - nextAttempts})`);
+            setAuthError(`Usuario o contraseña incorrectos. (Intentos restantes: ${5 - nextAttempts})`);
           }
         } else {
           setIsAuthenticated(true);
@@ -612,7 +619,7 @@ export default function AdminPage() {
           localStorage.removeItem('kb_admin_lockout');
         }
       } catch (err: any) {
-        setAuthError(`Ocurrió un error de conexión con Supabase: ${err?.message || 'desconocido'}.`);
+        setAuthError('Usuario o contraseña incorrectos.');
       } finally {
         setAuthLoading(false);
       }
@@ -1247,6 +1254,149 @@ export default function AdminPage() {
   };
 
   // ==========================================
+  // GALLERY ACTIONS
+  // ==========================================
+  const handleOpenGalleryModal = (item?: GalleryImage) => {
+    if (item) {
+      setEditingGallery(item);
+      setGalleryForm({
+        image_url: item.image_url,
+        caption: item.caption,
+        category: item.category || 'lugar',
+        order_index: item.order_index || 0
+      });
+    } else {
+      setEditingGallery(null);
+      setGalleryForm({
+        image_url: '',
+        caption: '',
+        category: 'lugar',
+        order_index: localGallery.length + 1
+      });
+    }
+    setGalleryFormError('');
+    setIsGalleryModalOpen(true);
+  };
+
+  const handleGallerySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGalleryFormError('');
+
+    if (!galleryForm.image_url.trim()) {
+      setGalleryFormError('Debes ingresar la URL de la fotografía.');
+      return;
+    }
+
+    if (!galleryForm.caption.trim()) {
+      setGalleryFormError('Debes ingresar un título o pie de foto.');
+      return;
+    }
+
+    setGallerySubmitting(true);
+    const wasEditing = !!editingGallery;
+    const captionSaved = galleryForm.caption.trim();
+
+    try {
+      if (isMock) {
+        let updatedGallery: GalleryImage[];
+        if (editingGallery) {
+          updatedGallery = localGallery.map(img => 
+            img.id === editingGallery.id 
+              ? {
+                  ...img,
+                  image_url: galleryForm.image_url.trim(),
+                  caption: captionSaved,
+                  category: galleryForm.category,
+                  order_index: Number(galleryForm.order_index) || 0
+                }
+              : img
+          );
+        } else {
+          const newImg: GalleryImage = {
+            id: 'gal-' + Date.now(),
+            image_url: galleryForm.image_url.trim(),
+            caption: captionSaved,
+            category: galleryForm.category,
+            order_index: Number(galleryForm.order_index) || (localGallery.length + 1),
+            created_at: new Date().toISOString()
+          };
+          updatedGallery = [...localGallery, newImg];
+        }
+        setLocalGallery(updatedGallery);
+        saveMockGallery(updatedGallery);
+      } else {
+        if (editingGallery) {
+          const { error } = await supabase
+            .from('gallery')
+            .update({
+              image_url: galleryForm.image_url.trim(),
+              caption: captionSaved,
+              category: galleryForm.category,
+              order_index: Number(galleryForm.order_index) || 0
+            })
+            .eq('id', editingGallery.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('gallery')
+            .insert([{
+              image_url: galleryForm.image_url.trim(),
+              caption: captionSaved,
+              category: galleryForm.category,
+              order_index: Number(galleryForm.order_index) || (localGallery.length + 1)
+            }]);
+          if (error) throw error;
+        }
+        await refreshData();
+      }
+
+      setIsGalleryModalOpen(false);
+      setEditingGallery(null);
+      setGalleryForm({ image_url: '', caption: '', category: 'lugar', order_index: 0 });
+
+      showToast(
+        wasEditing ? '¡Foto Actualizada!' : '¡Foto Agregada!',
+        `"${captionSaved}" se guardó exitosamente en la galería.`,
+        'success'
+      );
+    } catch (e: any) {
+      setGalleryFormError('Error: ' + e.message);
+    } finally {
+      setGallerySubmitting(false);
+    }
+  };
+
+  const handleDeleteGalleryImage = (id: string) => {
+    const item = localGallery.find(g => g.id === id);
+    const title = item?.caption || 'esta fotografía';
+
+    requestConfirm(
+      '¿Eliminar fotografía de la galería?',
+      `¿Estás seguro de que deseas eliminar permanentemente "${title}" de las instalaciones/galería?`,
+      async () => {
+        try {
+          if (isMock) {
+            const updated = localGallery.filter(g => g.id !== id);
+            setLocalGallery(updated);
+            saveMockGallery(updated);
+          } else {
+            const { error } = await supabase
+              .from('gallery')
+              .delete()
+              .eq('id', id);
+            if (error) throw error;
+            await refreshData();
+          }
+          showToast('Foto Eliminada', `"${title}" ha sido eliminada de la galería.`, 'info');
+        } catch (e: any) {
+          showToast('Error al eliminar', e.message, 'error');
+        }
+      },
+      { confirmText: 'Eliminar Foto', isDanger: true }
+    );
+  };
+
+  // ==========================================
   // CONFIGURATION UPDATE ACTIONS
   // ==========================================
   const handleSettingsSubmit = async (e: React.FormEvent) => {
@@ -1260,12 +1410,39 @@ export default function AdminPage() {
         saveMockProfile(settingsForm);
         setSettingsSuccess(true);
         setTimeout(() => setSettingsSuccess(false), 3000);
-        showToast('¡Configuración Guardada!', 'Los datos del restaurante se actualizaron correctamente en el modo demo.', 'success');
+        showToast('¡Configuración Guardada!', 'Los datos y fotografías de Nosotros se actualizaron correctamente.', 'success');
       } else {
-        // Supabase DB save
+        // Supabase DB save: first try updating all fields including about_image_2/3/4
+        const fullPayload: any = {
+          name: settingsForm.name,
+          slogan: settingsForm.slogan,
+          logo_url: settingsForm.logo_url,
+          address: settingsForm.address,
+          whatsapp_number: settingsForm.whatsapp_number,
+          google_maps_embed: settingsForm.google_maps_embed,
+          about_text: settingsForm.about_text,
+          about_image: settingsForm.about_image || '',
+          about_image_2: settingsForm.about_image_2 || '',
+          about_image_3: settingsForm.about_image_3 || '',
+          about_image_4: settingsForm.about_image_4 || '',
+        };
+
         const { error } = await supabase
           .from('business_profile')
-          .update({
+          .update(fullPayload)
+          .eq('id', settingsForm.id);
+
+        // Fallback: If Supabase table doesn't have about_image_2/3/4 columns yet,
+        // store them safely inside seo_metadata JSONB so nothing fails or crashes!
+        if (error && (error.message?.includes('about_image_') || (error as any)?.code === '42703')) {
+          const fallbackSeo = {
+            ...(settingsForm.seo_metadata || {}),
+            about_image_2: settingsForm.about_image_2 || '',
+            about_image_3: settingsForm.about_image_3 || '',
+            about_image_4: settingsForm.about_image_4 || '',
+          };
+
+          const fallbackPayload: any = {
             name: settingsForm.name,
             slogan: settingsForm.slogan,
             logo_url: settingsForm.logo_url,
@@ -1273,14 +1450,24 @@ export default function AdminPage() {
             whatsapp_number: settingsForm.whatsapp_number,
             google_maps_embed: settingsForm.google_maps_embed,
             about_text: settingsForm.about_text,
-          })
-          .eq('id', settingsForm.id);
+            about_image: settingsForm.about_image || '',
+            seo_metadata: fallbackSeo,
+          };
 
-        if (error) throw error;
+          const fallbackRes = await supabase
+            .from('business_profile')
+            .update(fallbackPayload)
+            .eq('id', settingsForm.id);
+
+          if (fallbackRes.error) throw fallbackRes.error;
+        } else if (error) {
+          throw error;
+        }
+
         setSettingsSuccess(true);
         await refreshData();
         setTimeout(() => setSettingsSuccess(false), 3000);
-        showToast('¡Configuración Guardada!', 'Los cambios en los datos del restaurante se aplicaron en la base de datos.', 'success');
+        showToast('¡Configuración Guardada!', 'Los datos y fotografías de Nosotros se aplicaron en la base de datos.', 'success');
       }
     } catch (e: any) {
       showToast('Error al guardar', e.message, 'error');
@@ -1392,7 +1579,7 @@ export default function AdminPage() {
             <p className="text-gray-400 text-xs mt-2 leading-relaxed">
               {isMock 
                 ? 'Modo Demo Activo. Digita la contraseña "admin123" para ingresar.' 
-                : 'Acceso seguro a base de datos Supabase.'}
+                : 'Ingresa tus credenciales para acceder al panel de administración.'}
             </p>
           </div>
 
@@ -1567,6 +1754,18 @@ export default function AdminPage() {
             >
               <Calendar className="w-4 h-4 md:w-4.5 md:h-4.5" />
               <span>Eventos</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('gallery')}
+              className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3.5 md:px-4 py-2 md:py-3 rounded-xl text-xs md:text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 touch-manipulation active:scale-95 cursor-pointer ${
+                activeTab === 'gallery' 
+                  ? 'bg-[#FBBF24] text-black font-bold shadow-md' 
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white bg-white/[0.03] md:bg-transparent border border-white/5 md:border-transparent'
+              }`}
+            >
+              <Camera className="w-4 h-4 md:w-4.5 md:h-4.5" />
+              <span>Galería</span>
             </button>
             <button
               type="button"
@@ -2583,6 +2782,275 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* TAB: GALERÍA & INSTALACIONES */}
+        {activeTab === 'gallery' && (
+          <div className="space-y-8 animate-fade-in">
+            {/* Top Bar */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h1 className="font-display text-3xl font-bold tracking-wide text-white">Galería & Instalaciones</h1>
+                <p className="text-gray-400 text-xs mt-1">
+                  Personaliza las fotografías de tus instalaciones, salas lounge, platos y área de bar exhibidas en la página web.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleOpenGalleryModal()}
+                className="px-5 py-3 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-sans text-xs uppercase tracking-widest font-bold flex items-center gap-2 hover:shadow-lg hover:scale-103 transition-all duration-300 touch-manipulation active:scale-95 cursor-pointer min-h-[44px]"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                Agregar Fotografía
+              </button>
+            </div>
+
+            {/* Category Filter Pills */}
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { id: 'todas', label: 'Todas las Fotos' },
+                { id: 'lugar', label: 'Instalaciones & Lounge' },
+                { id: 'comida', label: 'Platos & Gastronomía' },
+                { id: 'bebidas', label: 'Bebidas & Bar' },
+              ].map((pill) => {
+                const count = pill.id === 'todas'
+                  ? localGallery.length
+                  : localGallery.filter(g => g.category?.toLowerCase() === pill.id).length;
+                return (
+                  <button
+                    key={pill.id}
+                    type="button"
+                    onClick={() => setGalleryCategoryFilter(pill.id)}
+                    className={`px-4 py-2 rounded-full text-xs font-display uppercase tracking-wider font-bold transition-all duration-200 touch-manipulation active:scale-95 cursor-pointer ${
+                      galleryCategoryFilter === pill.id
+                        ? 'bg-[#FBBF24] text-black shadow-md'
+                        : 'bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:border-white/20'
+                    }`}
+                  >
+                    {pill.label} ({count})
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Gallery Cards Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {localGallery
+                .filter(img => galleryCategoryFilter === 'todas' || img.category?.toLowerCase() === galleryCategoryFilter)
+                .map((item) => (
+                  <div
+                    key={item.id}
+                    className="group bg-white/5 border border-white/5 rounded-2xl overflow-hidden shadow-xl hover:border-white/20 transition-all duration-300 flex flex-col"
+                  >
+                    {/* Image Preview Container */}
+                    <div className="relative aspect-video sm:aspect-square bg-black/40 overflow-hidden">
+                      <img
+                        src={item.image_url}
+                        alt={item.caption}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?q=80&w=800';
+                        }}
+                      />
+                      {/* Category Badge */}
+                      <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] uppercase tracking-widest font-bold font-display bg-black/70 backdrop-blur-md text-[#FBBF24] border border-[#FBBF24]/30">
+                        {item.category === 'lugar' ? 'Instalaciones' : item.category === 'comida' ? 'Plato' : item.category === 'bebidas' ? 'Bebida' : item.category}
+                      </span>
+                    </div>
+
+                    {/* Content & Actions */}
+                    <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                      <div>
+                        <h4 className="font-display text-white text-sm font-bold line-clamp-2 leading-snug">
+                          {item.caption}
+                        </h4>
+                        <p className="text-gray-400 text-xs mt-1">
+                          Orden #{item.order_index}
+                        </p>
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenGalleryModal(item)}
+                          className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white border border-white/5 text-xs flex items-center gap-1.5 transition-all touch-manipulation active:scale-95 cursor-pointer min-h-[38px]"
+                          title="Editar fotografía"
+                        >
+                          <Edit className="w-3.5 h-3.5 text-[#FBBF24]" />
+                          <span>Editar</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteGalleryImage(item.id)}
+                          className="p-2.5 rounded-xl bg-red-950/20 hover:bg-red-900/30 text-red-400 border border-red-500/20 text-xs flex items-center gap-1.5 transition-all touch-manipulation active:scale-95 cursor-pointer min-h-[38px]"
+                          title="Eliminar fotografía"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Eliminar</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            {/* Empty state */}
+            {localGallery.filter(img => galleryCategoryFilter === 'todas' || img.category?.toLowerCase() === galleryCategoryFilter).length === 0 && (
+              <div className="text-center py-16 bg-white/5 rounded-2xl border border-dashed border-white/10 p-6">
+                <Camera className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                <h4 className="text-white font-display text-base font-bold">No hay fotografías en esta categoría</h4>
+                <p className="text-gray-400 text-xs mt-1">Agrega una nueva imagen para exhibir las instalaciones o platos de tu restaurante.</p>
+                <button
+                  type="button"
+                  onClick={() => handleOpenGalleryModal()}
+                  className="mt-4 px-5 py-2.5 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-bold text-xs uppercase tracking-wider inline-flex items-center gap-2 transition-all touch-manipulation active:scale-95 cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  Agregar Primera Foto
+                </button>
+              </div>
+            )}
+
+            {/* Modal for Add / Edit Gallery Image */}
+            {isGalleryModalOpen && (
+              <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
+                <div className="bg-[#0E172A] border border-white/10 w-full max-w-lg rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 my-auto max-h-[90vh] overflow-y-auto">
+                  <div className="flex justify-between items-center pb-4 border-b border-white/5">
+                    <h3 className="font-display text-xl font-bold text-white flex items-center gap-2">
+                      <Camera className="w-5 h-5 text-[#FBBF24]" />
+                      {editingGallery ? 'Editar Fotografía' : 'Agregar Fotografía a la Galería'}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsGalleryModalOpen(false);
+                        setGalleryFormError('');
+                      }}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors touch-manipulation cursor-pointer"
+                      aria-label="Cerrar modal"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {galleryFormError && (
+                    <div className="p-3.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs flex items-center gap-2.5 animate-fade-in">
+                      <AlertCircle className="w-4.5 h-4.5 shrink-0 text-red-400" />
+                      <span>{galleryFormError}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleGallerySubmit} className="space-y-4 text-sm">
+                    {/* Image URL */}
+                    <div>
+                      <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">
+                        URL de la Fotografía *
+                      </label>
+                      <input
+                        type="url"
+                        required
+                        placeholder="https://images.unsplash.com/..."
+                        value={galleryForm.image_url}
+                        onChange={(e) => setGalleryForm({ ...galleryForm, image_url: e.target.value })}
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-xs"
+                      />
+                    </div>
+
+                    {/* Real-time Preview */}
+                    {galleryForm.image_url && (
+                      <div className="space-y-1">
+                        <span className="text-gray-400 text-[10px] font-semibold uppercase tracking-wider">Vista Previa:</span>
+                        <div className="relative h-40 rounded-xl overflow-hidden border border-white/10 bg-black/40">
+                          <img
+                            src={galleryForm.image_url}
+                            alt="Vista previa"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Caption / Title */}
+                    <div>
+                      <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">
+                        Pie de Foto / Título *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ej. Salas Lounge y Reservados VIP"
+                        value={galleryForm.caption}
+                        onChange={(e) => setGalleryForm({ ...galleryForm, caption: e.target.value })}
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-xs"
+                      />
+                    </div>
+
+                    {/* Category Selection */}
+                    <div>
+                      <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">
+                        Categoría de la Foto *
+                      </label>
+                      <select
+                        value={galleryForm.category}
+                        onChange={(e) => setGalleryForm({ ...galleryForm, category: e.target.value })}
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-xs cursor-pointer"
+                      >
+                        <option value="lugar" className="bg-[#0E172A] text-white">Lugar / Instalaciones / Lounge</option>
+                        <option value="comida" className="bg-[#0E172A] text-white">Comida / Platos Gastronómicos</option>
+                        <option value="bebidas" className="bg-[#0E172A] text-white">Bebidas / Coctelería & Bar</option>
+                      </select>
+                    </div>
+
+                    {/* Order Index */}
+                    <div>
+                      <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">
+                        Posición / Orden
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={galleryForm.order_index}
+                        onChange={(e) => setGalleryForm({ ...galleryForm, order_index: parseInt(e.target.value) || 1 })}
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-xs"
+                      />
+                    </div>
+
+                    {/* Modal Buttons */}
+                    <div className="flex justify-end gap-3 pt-4 border-t border-white/5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsGalleryModalOpen(false);
+                          setGalleryFormError('');
+                        }}
+                        className="px-5 py-3 rounded-full border border-white/10 hover:border-white text-xs font-sans uppercase tracking-widest transition-all touch-manipulation active:scale-95 min-h-[44px] cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={gallerySubmitting}
+                        className="px-6 py-3 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-display text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 touch-manipulation active:scale-95 disabled:opacity-60 cursor-pointer min-h-[44px]"
+                      >
+                        {gallerySubmitting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Guardando...</span>
+                          </>
+                        ) : (
+                          <span>{editingGallery ? 'Guardar Cambios' : 'Agregar Fotografía'}</span>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* TAB: RECYCLE BIN (PAPELERA) */}
         {activeTab === 'recycle' && (
           <div className="space-y-8 animate-fade-in">
@@ -2873,6 +3341,125 @@ export default function AdminPage() {
                     onChange={(e) => handleSettingsFieldChange('about_text', e.target.value)}
                     className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none resize-none"
                   />
+                </div>
+
+                {/* Fotografías de la Sección Nosotros (Mosaico de 4 Fotos) */}
+                <div className="sm:col-span-2 pt-6 border-t border-white/10 space-y-4">
+                  <div>
+                    <h3 className="font-display text-base font-bold text-white flex items-center gap-2">
+                      <ImageIcon className="w-5 h-5 text-[#FBBF24]" />
+                      Fotografías de la Sección "Nosotros" (Mosaico de 4 Fotos)
+                    </h3>
+                    <p className="text-gray-400 text-xs mt-1">
+                      Personaliza las 4 fotografías que componen el mosaico en la sección "Nosotros" de tu sitio web. Puedes cambiar cualquier URL y ver la vista previa al instante.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Foto 1 */}
+                    <div className="p-4 rounded-xl bg-black/25 border border-white/10 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-gray-200 text-xs font-semibold uppercase tracking-wider">
+                          Foto 1 (Principal Superior Izq.)
+                        </label>
+                      </div>
+                      <input
+                        type="url"
+                        placeholder="https://images.unsplash.com/..."
+                        value={settingsForm.about_image || ''}
+                        onChange={(e) => handleSettingsFieldChange('about_image', e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none"
+                      />
+                      {settingsForm.about_image && (
+                        <div className="relative h-28 rounded-lg overflow-hidden border border-white/10 bg-black/40">
+                          <img
+                            src={settingsForm.about_image}
+                            alt="Vista previa Foto 1"
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Foto 2 */}
+                    <div className="p-4 rounded-xl bg-black/25 border border-white/10 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-gray-200 text-xs font-semibold uppercase tracking-wider">
+                          Foto 2 (Secundaria Inferior Izq.)
+                        </label>
+                      </div>
+                      <input
+                        type="url"
+                        placeholder="https://images.unsplash.com/..."
+                        value={settingsForm.about_image_2 || ''}
+                        onChange={(e) => handleSettingsFieldChange('about_image_2', e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none"
+                      />
+                      {settingsForm.about_image_2 && (
+                        <div className="relative h-28 rounded-lg overflow-hidden border border-white/10 bg-black/40">
+                          <img
+                            src={settingsForm.about_image_2}
+                            alt="Vista previa Foto 2"
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Foto 3 */}
+                    <div className="p-4 rounded-xl bg-black/25 border border-white/10 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-gray-200 text-xs font-semibold uppercase tracking-wider">
+                          Foto 3 (Ambiente Superior Der.)
+                        </label>
+                      </div>
+                      <input
+                        type="url"
+                        placeholder="https://images.unsplash.com/..."
+                        value={settingsForm.about_image_3 || ''}
+                        onChange={(e) => handleSettingsFieldChange('about_image_3', e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none"
+                      />
+                      {settingsForm.about_image_3 && (
+                        <div className="relative h-28 rounded-lg overflow-hidden border border-white/10 bg-black/40">
+                          <img
+                            src={settingsForm.about_image_3}
+                            alt="Vista previa Foto 3"
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Foto 4 */}
+                    <div className="p-4 rounded-xl bg-black/25 border border-white/10 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-gray-200 text-xs font-semibold uppercase tracking-wider">
+                          Foto 4 (Especial Inferior Der.)
+                        </label>
+                      </div>
+                      <input
+                        type="url"
+                        placeholder="https://images.unsplash.com/..."
+                        value={settingsForm.about_image_4 || ''}
+                        onChange={(e) => handleSettingsFieldChange('about_image_4', e.target.value)}
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none"
+                      />
+                      {settingsForm.about_image_4 && (
+                        <div className="relative h-28 rounded-lg overflow-hidden border border-white/10 bg-black/40">
+                          <img
+                            src={settingsForm.about_image_4}
+                            alt="Vista previa Foto 4"
+                            className="w-full h-full object-cover"
+                            onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
               </div>

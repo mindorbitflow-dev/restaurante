@@ -204,18 +204,18 @@ WITH CHECK (auth.role() = 'authenticated');
     INSERT INTO business_profile (
         name, slogan, logo_url, about_text, about_image, whatsapp_number, address, google_maps_embed, working_hours, social_links, theme_colors, seo_metadata
     ) VALUES (
-        'King Blacked',
-        'Experiencia Gastronómica & Alta Coctelería',
+        'Restaurante Demo',
+        'Experiencia Gastronómica & Coctelería de Autor',
         'https://images.unsplash.com/photo-1543007630-9710e4a00a20?w=120&h=120&fit=crop&q=80',
-        'En King Blacked fusionamos la sofisticación culinaria con la magia de la noche. Nuestro bar y restaurante de diseño contemporáneo es el punto de encuentro idóneo para quienes buscan deleitar sus sentidos. Ofrecemos carnes maduradas premium, creaciones de autor a cargo de chefs internacionales y una carta de coctelería exótica que redefine los clásicos.',
+        'En Restaurante Demo fusionamos la sofisticación culinaria con la magia de una atmósfera contemporánea. Nuestro bar y restaurante es el punto de encuentro idóneo para quienes buscan deleitar sus sentidos. Ofrecemos carnes maduradas premium, creaciones de autor a cargo de chefs internacionales y una selecta carta de coctelería exótica que redefine los clásicos.',
         'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=800&fit=crop',
         '+573001234567',
-        'Vía de la Elegancia # 12-45, Zona Rosa, Bogotá, Colombia',
+        'Avenida Gastronómica # 12-45, Zona Rosa, Bogotá, Colombia',
         'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15905.977905896677!2d-74.05370339999999!3d4.6738919!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x8e3f9a74fb91dfaf%3A0xe54dcf9c2794eb09!2sZona%20T%2C%20Bogot%C3%A1!5e0!3m2!1ses!2sco!4v1700000000000!5m2!1ses!2sco',
         '{"Lunes a Miércoles": "04:00 PM - 11:30 PM", "Jueves y Viernes": "03:00 PM - 02:00 AM", "Sábados": "01:00 PM - 03:00 AM", "Domingos y Festivos": "01:00 PM - 10:30 PM"}',
-        '{"facebook": "https://facebook.com/kingblacked", "instagram": "https://instagram.com/kingblacked", "twitter": "https://twitter.com/kingblacked", "tiktok": "https://tiktok.com/@kingblacked"}',
+        '{"facebook": "https://facebook.com", "instagram": "https://instagram.com", "twitter": "https://twitter.com", "tiktok": "https://tiktok.com"}',
         '{"primary": "#D4AF37", "secondary": "#F59E0B", "background": "#0A0A0C"}',
-        '{"title": "King Blacked | Bar & Restaurante Exclusivo", "description": "Disfruta de la mejor cocina fusión, cortes de carne premium y coctelería de autor en una atmósfera exclusiva e inigualable. ¡Reserva tu mesa hoy!"}'
+        '{"title": "Restaurante Demo | Bar & Gastronomía Exclusiva", "description": "Disfruta de la mejor cocina fusión, cortes de carne premium y coctelería de autor en una atmósfera exclusiva e inigualable. ¡Reserva tu mesa hoy!"}'
     ) ON CONFLICT DO NOTHING;
 
     -- Inserción de Categorías
@@ -231,6 +231,6 @@ WITH CHECK (auth.role() = 'authenticated');
     -- Inserción de Productos Básicos
     INSERT INTO products (name, category_id, description, price, image_url, tags, is_available, is_promotion, order_index) VALUES
     ('Nachos de la Casa Premium', '11111111-1111-1111-1111-111111111111', 'Totopos de maíz crujientes bañados en cheddar fundido artesanal, frijoles negros, pico de gallo cítrico, jalapeños en escabeche y crema agria.', 32000, 'https://images.unsplash.com/photo-1513456852971-30c0b8199d4d?w=600&fit=crop&q=80', ARRAY['Para Compartir', 'Popular'], true, false, 1),
-    ('Hamburguesa King Blacked', '22222222-2222-2222-2222-222222222222', '200g de selecto corte de res Angus a la parrilla, queso cheddar madurado, tocineta crujiente, cebolla confitada al oporto y salsa secreta en pan brioche.', 45000, 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&fit=crop&q=80', ARRAY['Gourmet', 'Casa'], true, false, 1),
+    ('Hamburguesa Gourmet de la Casa', '22222222-2222-2222-2222-222222222222', '200g de selecto corte de res Angus a la parrilla, queso cheddar madurado, tocineta crujiente, cebolla confitada al oporto y salsa secreta en pan brioche.', 45000, 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&fit=crop&q=80', ARRAY['Gourmet', 'Casa'], true, false, 1),
     ('Mojito Premium de Menta', '44444444-4444-4444-4444-444444444444', 'Ron Añejo, zumo fresco de lima ácida, hojas frescas de hierbabuena maceradas suavemente, soda y sirope simple.', 33000, 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&fit=crop&q=80', ARRAY['Clásico', 'Popular'], true, false, 1)
     ON CONFLICT DO NOTHING;

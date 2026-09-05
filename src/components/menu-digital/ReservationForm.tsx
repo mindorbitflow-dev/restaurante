@@ -104,20 +104,20 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
   };
 
   return (
-    <div id="reservas" className="w-full max-w-2xl mx-auto p-6 sm:p-10 rounded-2xl bg-white/5 border border-white/5 shadow-2xl relative overflow-hidden">
-      {/* Glow decorative ball */}
-      <div className="absolute top-0 right-0 w-24 h-24 bg-gold/5 rounded-full blur-2xl -z-10"></div>
+    <div id="reservas" className="w-full max-w-2xl mx-auto p-6 sm:p-10 rounded-3xl bg-[#0E172A] border border-slate-800 shadow-2xl relative overflow-hidden">
+      {/* Subtle Glow */}
+      <div className="absolute top-0 right-0 w-32 h-32 bg-[#FBBF24]/5 rounded-full blur-2xl -z-10"></div>
 
       {success ? (
         <div className="text-center py-10 space-y-6 animate-fade-in">
-          <div className="w-16 h-16 bg-gold/10 border border-gold/40 text-gold rounded-full flex items-center justify-center mx-auto shadow-lg animate-pulse">
+          <div className="w-16 h-16 bg-[#22C55E]/10 border border-[#22C55E]/40 text-[#22C55E] rounded-full flex items-center justify-center mx-auto shadow-lg animate-pulse">
             <CheckCircle2 className="w-8 h-8" />
           </div>
           <div>
-            <h3 className="font-serif text-white text-2xl font-bold tracking-wide">
+            <h3 className="font-display text-white text-2xl font-extrabold tracking-wide">
               ¡Reserva Solicitada Exitosamente!
             </h3>
-            <p className="text-gray-400 text-sm mt-3 max-w-md mx-auto leading-relaxed">
+            <p className="text-slate-400 text-sm mt-3 max-w-md mx-auto leading-relaxed font-sans">
               Los detalles se han guardado. Se está abriendo WhatsApp para enviar la confirmación inmediata al negocio. Si no abre automáticamente, puedes pulsar el botón a continuación.
             </p>
           </div>
@@ -129,13 +129,13 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
               )}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-6 py-3 rounded-full bg-gradient-to-r from-gold to-amber-accent text-black font-serif text-xs uppercase tracking-widest font-bold hover:shadow-lg transition-all"
+              className="px-6 py-3 rounded-full bg-[#16A34A] hover:bg-[#15803D] text-white font-display text-xs uppercase tracking-widest font-bold shadow-lg transition-all"
             >
               Enviar Mensaje a WhatsApp
             </a>
             <button
               onClick={handleReset}
-              className="px-6 py-3 rounded-full border border-white/10 hover:border-gold/30 text-white font-serif text-xs uppercase tracking-widest transition-all"
+              className="px-6 py-3 rounded-full border border-slate-700 hover:border-[#FBBF24] text-white font-display text-xs uppercase tracking-widest font-bold transition-all"
             >
               Solicitar Otra Reserva
             </button>
@@ -144,17 +144,17 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="text-center mb-8">
-            <h3 className="font-serif text-white text-2xl font-bold tracking-wide flex items-center justify-center gap-2">
-              <Calendar className="w-6 h-6 text-gold" />
+            <h3 className="font-display text-white text-2xl sm:text-3xl font-extrabold tracking-wide flex items-center justify-center gap-2">
+              <Calendar className="w-6 h-6 text-[#FBBF24]" />
               Solicitar una Reserva
             </h3>
-            <p className="text-gray-400 text-xs sm:text-sm mt-2">
-              Completa el formulario para reservar tu mesa VIP. Confirmaremos tu asistencia a la brevedad.
+            <p className="text-slate-400 text-xs sm:text-sm mt-2 font-sans">
+              Completa el formulario para reservar tu mesa. Confirmaremos tu asistencia a la brevedad.
             </p>
           </div>
 
           {errorMsg && (
-            <div className="p-4 rounded-xl bg-red-950/20 border border-red-500/30 flex gap-3 text-red-400 text-xs sm:text-sm items-center">
+            <div className="p-4 rounded-xl bg-red-950/30 border border-red-500/40 flex gap-3 text-red-400 text-xs sm:text-sm items-center font-sans">
               <AlertCircle className="w-5 h-5 shrink-0" />
               <span>{errorMsg}</span>
             </div>
@@ -167,7 +167,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                 Nombre Completo *
               </label>
               <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gold/60" />
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60" />
                 <input
                   id="rsvp-name"
                   type="text"
@@ -175,7 +175,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="Tu nombre completo"
-                  className="w-full bg-black/40 border border-white/10 focus:border-gold/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans"
+                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans"
                 />
               </div>
             </div>
@@ -186,7 +186,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                 Número de Contacto *
               </label>
               <div className="relative">
-                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gold/60" />
+                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60" />
                 <input
                   id="rsvp-phone"
                   type="tel"
@@ -194,7 +194,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                   value={formData.phone}
                   onChange={handleInputChange}
                   placeholder="Tu número telefónico"
-                  className="w-full bg-black/40 border border-white/10 focus:border-gold/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans"
+                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans"
                 />
               </div>
             </div>
@@ -205,7 +205,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                 Fecha Seleccionada *
               </label>
               <div className="relative">
-                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gold/60" />
+                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60" />
                 <input
                   id="rsvp-date"
                   type="date"
@@ -213,7 +213,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                   value={formData.date}
                   onChange={handleInputChange}
                   min={new Date().toISOString().split('T')[0]} // Block past dates
-                  className="w-full bg-black/40 border border-white/10 focus:border-gold/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans"
+                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans"
                 />
               </div>
             </div>
@@ -224,13 +224,13 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                 Hora de la Cita *
               </label>
               <div className="relative">
-                <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gold/60" />
+                <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60" />
                 <select
                   id="rsvp-time"
                   name="time"
                   value={formData.time}
                   onChange={handleInputChange}
-                  className="w-full bg-black/40 border border-white/10 focus:border-gold/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans appearance-none"
+                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans appearance-none"
                 >
                   <option className="bg-[#121215] text-white" value="12:00">12:00 PM</option>
                   <option className="bg-[#121215] text-white" value="13:00">01:00 PM</option>
@@ -259,13 +259,13 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                 Cantidad de Comensales *
               </label>
               <div className="relative">
-                <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gold/60" />
+                <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60" />
                 <select
                   id="rsvp-people"
                   name="people"
                   value={formData.people}
                   onChange={handleInputChange}
-                  className="w-full bg-black/40 border border-white/10 focus:border-gold/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans appearance-none"
+                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans appearance-none"
                 >
                   <option className="bg-[#121215] text-white" value={1}>1 Persona</option>
                   <option className="bg-[#121215] text-white" value={2}>2 Personas</option>
@@ -285,7 +285,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                 Notas y Requerimientos Especiales
               </label>
               <div className="relative">
-                <MessageSquare className="absolute left-3.5 top-3.5 w-4 h-4 text-gold/60" />
+                <MessageSquare className="absolute left-3.5 top-3.5 w-4 h-4 text-[#FBBF24]/60" />
                 <textarea
                   id="rsvp-comments"
                   name="comments"
@@ -293,7 +293,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                   value={formData.comments}
                   onChange={handleInputChange}
                   placeholder="Ej. Celebración de aniversario, intolerancia al gluten, mesa cerca del escenario de jazz..."
-                  className="w-full bg-black/40 border border-white/10 focus:border-gold/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans resize-none"
+                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans resize-none"
                 />
               </div>
             </div>
@@ -302,7 +302,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 mt-4 rounded-full bg-gradient-to-r from-gold to-amber-accent text-black font-serif text-sm uppercase tracking-widest font-bold flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(212,175,55,0.45)] active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+            className="w-full py-4 mt-4 rounded-full bg-[#16A34A] hover:bg-[#15803D] text-white font-display text-sm uppercase tracking-widest font-black flex items-center justify-center gap-2 shadow-xl shadow-green-950/40 active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 cursor-pointer"
           >
             {loading ? 'Procesando...' : 'Confirmar Reserva e Ir a WhatsApp'}
           </button>

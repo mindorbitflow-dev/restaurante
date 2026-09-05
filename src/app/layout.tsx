@@ -1,14 +1,36 @@
 import type { Metadata } from 'next';
+import { Dancing_Script, Montserrat, Inter } from 'next/font/google';
 import { BusinessProvider } from '@/context/BusinessContext';
 import { CartProvider } from '@/context/CartContext';
 import './globals.css';
 
+const dancingScript = Dancing_Script({
+  subsets: ['latin'],
+  variable: '--font-dancing-script',
+  weight: ['600', '700'],
+  display: 'swap',
+});
+
+const montserrat = Montserrat({
+  subsets: ['latin'],
+  variable: '--font-montserrat',
+  weight: ['400', '500', '600', '700', '800', '900'],
+  display: 'swap',
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  weight: ['400', '500', '600', '700', '800'],
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
-  title: 'King Blacked | Alta Gastronomía & Coctelería de Autor',
+  title: 'Restaurante Demo | Sabor que enamora',
   description:
-    'Descubre una experiencia culinaria premium en Bogotá. Hamburguesas gourmet, cortes de carne madurados y la mejor carta de cócteles exóticos en una atmósfera única.',
-  keywords: 'restaurante de lujo, bar de alta gama, hamburguesas gourmet, cocteles de autor, reservas de mesa',
-  authors: [{ name: 'King Blacked' }],
+    'Menú digital interactivo, platillos gourmet, hamburguesas y coctelería de autor. Pide directo por WhatsApp.',
+  keywords: 'restaurante gourmet, hamburguesas artesanales, combos, menu digital, pedidos whatsapp',
+  authors: [{ name: 'Restaurante Demo' }],
 };
 
 export default function RootLayout({
@@ -17,8 +39,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className="h-full antialiased" style={{ scrollBehavior: 'smooth' }}>
-      <body className="min-h-full flex flex-col bg-[#0A0A0C] text-white">
+    <html
+      lang="es"
+      className={`${dancingScript.variable} ${montserrat.variable} ${inter.variable} h-full antialiased`}
+      style={{ scrollBehavior: 'smooth' }}
+    >
+      <body className="min-h-full flex flex-col bg-[#080E1E] text-white">
         <BusinessProvider>
           <CartProvider>{children}</CartProvider>
         </BusinessProvider>

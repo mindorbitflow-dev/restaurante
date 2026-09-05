@@ -18,7 +18,7 @@ export interface BusinessProfile {
   theme_colors: {
     primary: string; // e.g. '#D4AF37'
     secondary: string; // e.g. '#F59E0B'
-    background: string; // e.g. '#0A0A0C'
+    background: string; // e.g. '#080E1E'
   };
   seo_metadata: {
     title: string;

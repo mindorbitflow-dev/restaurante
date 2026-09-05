@@ -14,7 +14,7 @@ import Events from '@/components/landing/Events';
 
 export default function Home() {
   return (
-    <div className="bg-[#0A0A0C] min-h-screen text-white font-sans flex flex-col justify-between scroll-smooth">
+    <div className="bg-[#080E1E] min-h-screen text-white font-sans flex flex-col justify-between scroll-smooth">
       <Header />
       <CartSidebar />
       <WhatsAppFloat />

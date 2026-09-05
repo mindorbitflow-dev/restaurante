@@ -167,7 +167,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                 Nombre Completo *
               </label>
               <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60" />
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60 pointer-events-none" />
                 <input
                   id="rsvp-name"
                   type="text"
@@ -175,7 +175,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                   value={formData.name}
                   onChange={handleInputChange}
                   placeholder="Tu nombre completo"
-                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans"
+                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans touch-manipulation"
                 />
               </div>
             </div>
@@ -186,7 +186,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                 Número de Contacto *
               </label>
               <div className="relative">
-                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60" />
+                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60 pointer-events-none" />
                 <input
                   id="rsvp-phone"
                   type="tel"
@@ -194,7 +194,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                   value={formData.phone}
                   onChange={handleInputChange}
                   placeholder="Tu número telefónico"
-                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans"
+                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans touch-manipulation"
                 />
               </div>
             </div>
@@ -205,7 +205,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                 Fecha Seleccionada *
               </label>
               <div className="relative">
-                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60" />
+                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60 pointer-events-none" />
                 <input
                   id="rsvp-date"
                   type="date"
@@ -213,7 +213,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                   value={formData.date}
                   onChange={handleInputChange}
                   min={new Date().toISOString().split('T')[0]} // Block past dates
-                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans"
+                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans touch-manipulation cursor-pointer"
                 />
               </div>
             </div>
@@ -224,13 +224,13 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                 Hora de la Cita *
               </label>
               <div className="relative">
-                <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60" />
+                <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60 pointer-events-none" />
                 <select
                   id="rsvp-time"
                   name="time"
                   value={formData.time}
                   onChange={handleInputChange}
-                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans appearance-none"
+                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-8 py-3 text-sm text-white focus:outline-none transition-colors font-sans cursor-pointer touch-manipulation"
                 >
                   <option className="bg-[#121215] text-white" value="12:00">12:00 PM</option>
                   <option className="bg-[#121215] text-white" value="13:00">01:00 PM</option>
@@ -259,13 +259,13 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                 Cantidad de Comensales *
               </label>
               <div className="relative">
-                <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60" />
+                <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#FBBF24]/60 pointer-events-none" />
                 <select
                   id="rsvp-people"
                   name="people"
                   value={formData.people}
                   onChange={handleInputChange}
-                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans appearance-none"
+                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-8 py-3 text-sm text-white focus:outline-none transition-colors font-sans cursor-pointer touch-manipulation"
                 >
                   <option className="bg-[#121215] text-white" value={1}>1 Persona</option>
                   <option className="bg-[#121215] text-white" value={2}>2 Personas</option>
@@ -285,7 +285,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                 Notas y Requerimientos Especiales
               </label>
               <div className="relative">
-                <MessageSquare className="absolute left-3.5 top-3.5 w-4 h-4 text-[#FBBF24]/60" />
+                <MessageSquare className="absolute left-3.5 top-3.5 w-4 h-4 text-[#FBBF24]/60 pointer-events-none" />
                 <textarea
                   id="rsvp-comments"
                   name="comments"
@@ -293,7 +293,7 @@ Por favor, confírmenme la disponibilidad. Gracias.`;
                   value={formData.comments}
                   onChange={handleInputChange}
                   placeholder="Ej. Celebración de aniversario, intolerancia al gluten, mesa cerca del escenario de jazz..."
-                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans resize-none"
+                  className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none transition-colors font-sans resize-none touch-manipulation"
                 />
               </div>
             </div>

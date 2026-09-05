@@ -57,6 +57,18 @@ export default function AdminPage() {
   // Dashboard Active Navigation Tab
   const [activeTab, setActiveTab] = useState<'summary' | 'products' | 'categories' | 'reservations' | 'events' | 'recycle' | 'settings'>('summary');
 
+  const handleTabChange = (tab: 'summary' | 'products' | 'categories' | 'reservations' | 'events' | 'recycle' | 'settings') => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setTimeout(() => {
+        const mainEl = document.getElementById('admin-main-view');
+        if (mainEl) {
+          mainEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 50);
+    }
+  };
+
   // Dynamic lists from context for mutations
   const [localProducts, setLocalProducts] = useState<Product[]>([]);
   const [localCategories, setLocalCategories] = useState<Category[]>([]);
@@ -498,6 +510,8 @@ export default function AdminPage() {
               detail = `Credenciales no válidas para "${resolvedEmail}". Recuerda que debes crear el usuario en Supabase (Authentication > Users o ejecutando el script supabase_admin_user.sql).`;
             } else if (error.message.toLowerCase().includes('email not confirmed')) {
               detail = `El correo "${resolvedEmail}" no ha sido confirmado en Supabase. En Supabase > Authentication > Users activa "Auto-confirm user".`;
+            } else if (error.message.toLowerCase().includes('database error querying schema')) {
+              detail = `Error de esquema en Supabase: campos de tokens en NULL. Ejecuta el script de corrección en supabase_admin_user.sql o elimina y vuelve a crear el usuario desde Authentication > Users.`;
             }
             setAuthError(`${detail} (Intentos restantes: ${5 - nextAttempts})`);
           }
@@ -1251,107 +1265,134 @@ export default function AdminPage() {
     <div className="min-h-screen bg-[#080E1E] flex flex-col md:flex-row text-gray-100">
       
       {/* Sidebar Navigation */}
-      <aside className="w-full md:w-64 bg-[#050507] border-b md:border-b-0 md:border-r border-slate-800 p-6 flex flex-col justify-between shrink-0">
+      <aside className="w-full md:w-64 bg-[#050507] border-b md:border-b-0 md:border-r border-slate-800 p-4 md:p-6 flex flex-col md:justify-between shrink-0 sticky top-0 z-30 md:static backdrop-blur-md md:backdrop-blur-none bg-[#050507]/95">
         <div>
           {/* Brand header */}
-          <div className="flex items-center gap-2 mb-10 pb-4 border-b border-white/5">
-            <div className="w-8 h-8 rounded-full bg-[#FBBF24]/10 border border-[#FBBF24]/40 flex items-center justify-center font-sans text-[#FBBF24] font-bold">
-              {profile.name ? profile.name.charAt(0) : 'R'}
+          <div className="flex items-center justify-between md:justify-start gap-2 mb-3 md:mb-10 pb-3 md:pb-4 border-b border-white/5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-[#FBBF24]/10 border border-[#FBBF24]/40 flex items-center justify-center font-sans text-[#FBBF24] font-bold shrink-0">
+                {profile.name ? profile.name.charAt(0) : 'R'}
+              </div>
+              <div>
+                <h2 className="font-display text-white text-xs sm:text-sm font-bold uppercase tracking-wider leading-none">
+                  {profile.name}
+                </h2>
+                <span className="text-[9px] text-[#FBBF24] tracking-widest font-sans font-bold uppercase">
+                  {isMock ? 'PANEL DEMO' : 'SOCIOS SAAS'}
+                </span>
+              </div>
             </div>
-            <div>
-              <h2 className="font-display text-white text-sm font-bold uppercase tracking-wider leading-none">
-                {profile.name}
-              </h2>
-              <span className="text-[9px] text-[#FBBF24] tracking-widest font-sans font-bold uppercase">
-                {isMock ? 'PANEL DEMO' : 'SOCIOS SAAS'}
-              </span>
+
+            {/* Quick mobile links */}
+            <div className="flex md:hidden items-center gap-2">
+              <a
+                href="/"
+                className="px-2.5 py-1.5 border border-white/10 hover:border-[#FBBF24]/40 rounded-lg text-[10px] tracking-wider uppercase font-display text-gray-300 hover:text-white transition-colors"
+              >
+                Web
+              </a>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="p-1.5 rounded-lg bg-red-950/40 text-red-400 border border-red-900/40 touch-manipulation active:scale-90"
+                title="Cerrar Sesión"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          {/* Nav Nodes */}
-          <nav className="space-y-1">
+          {/* Nav Nodes: Horizontal scrollable pill bar on mobile, vertical sidebar on desktop */}
+          <nav className="flex md:flex-col gap-2 md:gap-1 overflow-x-auto md:overflow-visible pb-1 md:pb-0 scrollbar-none touch-pan-x">
             <button
-              onClick={() => setActiveTab('summary')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 ${
+              type="button"
+              onClick={() => handleTabChange('summary')}
+              className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3.5 md:px-4 py-2 md:py-3 rounded-xl text-xs md:text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 touch-manipulation active:scale-95 cursor-pointer ${
                 activeTab === 'summary' 
                   ? 'bg-[#FBBF24] text-black font-bold shadow-md' 
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white bg-white/[0.03] md:bg-transparent border border-white/5 md:border-transparent'
               }`}
             >
-              <LayoutDashboard className="w-4.5 h-4.5" />
-              Resumen
+              <LayoutDashboard className="w-4 h-4 md:w-4.5 md:h-4.5" />
+              <span>Resumen</span>
             </button>
             <button
-              onClick={() => setActiveTab('products')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 ${
+              type="button"
+              onClick={() => handleTabChange('products')}
+              className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3.5 md:px-4 py-2 md:py-3 rounded-xl text-xs md:text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 touch-manipulation active:scale-95 cursor-pointer ${
                 activeTab === 'products' 
                   ? 'bg-[#FBBF24] text-black font-bold shadow-md' 
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white bg-white/[0.03] md:bg-transparent border border-white/5 md:border-transparent'
               }`}
             >
-              <Utensils className="w-4.5 h-4.5" />
-              Catálogo
+              <Utensils className="w-4 h-4 md:w-4.5 md:h-4.5" />
+              <span>Catálogo</span>
             </button>
             <button
-              onClick={() => setActiveTab('categories')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 ${
+              type="button"
+              onClick={() => handleTabChange('categories')}
+              className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3.5 md:px-4 py-2 md:py-3 rounded-xl text-xs md:text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 touch-manipulation active:scale-95 cursor-pointer ${
                 activeTab === 'categories' 
                   ? 'bg-[#FBBF24] text-black font-bold shadow-md' 
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white bg-white/[0.03] md:bg-transparent border border-white/5 md:border-transparent'
               }`}
             >
-              <FolderHeart className="w-4.5 h-4.5" />
-              Categorías
+              <FolderHeart className="w-4 h-4 md:w-4.5 md:h-4.5" />
+              <span>Categorías</span>
             </button>
             <button
-              onClick={() => setActiveTab('reservations')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 ${
+              type="button"
+              onClick={() => handleTabChange('reservations')}
+              className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3.5 md:px-4 py-2 md:py-3 rounded-xl text-xs md:text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 touch-manipulation active:scale-95 cursor-pointer ${
                 activeTab === 'reservations' 
                   ? 'bg-[#FBBF24] text-black font-bold shadow-md' 
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white bg-white/[0.03] md:bg-transparent border border-white/5 md:border-transparent'
               }`}
             >
-              <CalendarCheck className="w-4.5 h-4.5" />
-              Reservas
+              <CalendarCheck className="w-4 h-4 md:w-4.5 md:h-4.5" />
+              <span>Reservas</span>
             </button>
             <button
-              onClick={() => setActiveTab('events')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 ${
+              type="button"
+              onClick={() => handleTabChange('events')}
+              className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3.5 md:px-4 py-2 md:py-3 rounded-xl text-xs md:text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 touch-manipulation active:scale-95 cursor-pointer ${
                 activeTab === 'events' 
                   ? 'bg-[#FBBF24] text-black font-bold shadow-md' 
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white bg-white/[0.03] md:bg-transparent border border-white/5 md:border-transparent'
               }`}
             >
-              <Calendar className="w-4.5 h-4.5" />
-              Eventos
+              <Calendar className="w-4 h-4 md:w-4.5 md:h-4.5" />
+              <span>Eventos</span>
             </button>
             <button
-              onClick={() => setActiveTab('recycle')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 ${
+              type="button"
+              onClick={() => handleTabChange('recycle')}
+              className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3.5 md:px-4 py-2 md:py-3 rounded-xl text-xs md:text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 touch-manipulation active:scale-95 cursor-pointer ${
                 activeTab === 'recycle' 
                   ? 'bg-[#FBBF24] text-black font-bold shadow-md' 
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white bg-white/[0.03] md:bg-transparent border border-white/5 md:border-transparent'
               }`}
             >
-              <Trash2 className="w-4.5 h-4.5" />
-              Papelera
+              <Trash2 className="w-4 h-4 md:w-4.5 md:h-4.5" />
+              <span>Papelera</span>
             </button>
             <button
-              onClick={() => setActiveTab('settings')}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 ${
+              type="button"
+              onClick={() => handleTabChange('settings')}
+              className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-3.5 md:px-4 py-2 md:py-3 rounded-xl text-xs md:text-sm font-display uppercase tracking-wider font-bold transition-all duration-200 touch-manipulation active:scale-95 cursor-pointer ${
                 activeTab === 'settings' 
                   ? 'bg-[#FBBF24] text-black font-bold shadow-md' 
-                  : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                  : 'text-gray-400 hover:bg-white/5 hover:text-white bg-white/[0.03] md:bg-transparent border border-white/5 md:border-transparent'
               }`}
             >
-              <Settings className="w-4.5 h-4.5" />
-              Configurar
+              <Settings className="w-4 h-4 md:w-4.5 md:h-4.5" />
+              <span>Configurar</span>
             </button>
           </nav>
         </div>
 
-        {/* Footer Area with Signout */}
-        <div className="pt-6 border-t border-white/5 mt-6 flex flex-col gap-3">
+        {/* Footer Area with Signout (desktop only, mobile has it in top header) */}
+        <div className="hidden md:flex pt-6 border-t border-white/5 mt-6 flex-col gap-3">
           <a
             href="/"
             className="w-full text-center py-2 border border-white/10 hover:border-[#FBBF24]/30 rounded-xl text-xs tracking-wider uppercase font-display hover:text-[#FBBF24] transition-all"
@@ -1359,8 +1400,9 @@ export default function AdminPage() {
             Ver Sitio Web
           </a>
           <button
+            type="button"
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-red-950/20 text-red-400 border border-red-950/40 text-xs font-display uppercase tracking-widest font-bold hover:bg-red-900/20 transition-all duration-200"
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-red-950/20 text-red-400 border border-red-950/40 text-xs font-display uppercase tracking-widest font-bold hover:bg-red-900/20 transition-all duration-200 touch-manipulation active:scale-95 cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             Cerrar Sesión
@@ -1369,7 +1411,7 @@ export default function AdminPage() {
       </aside>
 
       {/* Main Workspace content */}
-      <main className="flex-1 p-6 md:p-10 overflow-y-auto max-w-7xl mx-auto w-full">
+      <main id="admin-main-view" className="flex-1 p-4 md:p-10 overflow-y-auto max-w-7xl mx-auto w-full">
         
         {/* TAB 1: SUMMARY (DASHBOARD METRICS) */}
         {activeTab === 'summary' && (
@@ -1558,8 +1600,9 @@ export default function AdminPage() {
                         </td>
                         <td className="py-3 pr-4 text-center">
                           <button
+                            type="button"
                             onClick={() => toggleAvailability(prod)}
-                            className={`inline-block px-3 py-1 rounded-full text-[9px] uppercase tracking-widest font-bold cursor-pointer transition-colors ${
+                            className={`inline-block px-3 py-1.5 rounded-full text-[9px] uppercase tracking-widest font-bold cursor-pointer transition-all touch-manipulation active:scale-95 ${
                               prod.is_available 
                                 ? 'bg-emerald-600/20 text-emerald-500 border border-emerald-500/20' 
                                 : 'bg-red-950/20 text-red-400 border border-red-500/20'
@@ -1578,17 +1621,19 @@ export default function AdminPage() {
                           </span>
                         </td>
                         <td className="py-3 text-right">
-                          <div className="flex gap-2 justify-end">
+                          <div className="flex gap-1.5 justify-end">
                             <button
+                              type="button"
                               onClick={() => handleEditProduct(prod)}
-                              className="p-2 rounded-lg text-gray-400 hover:text-[#FBBF24] hover:bg-white/5 transition-colors"
+                              className="p-2.5 rounded-lg text-gray-400 hover:text-[#FBBF24] hover:bg-white/5 transition-all touch-manipulation active:scale-90 cursor-pointer"
                               title="Editar"
                             >
                               <Edit className="w-4.5 h-4.5" />
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleDeleteProduct(prod.id)}
-                              className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-white/5 transition-colors"
+                              className="p-2.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-white/5 transition-all touch-manipulation active:scale-90 cursor-pointer"
                               title="Borrar"
                             >
                               <Trash2 className="w-4.5 h-4.5" />

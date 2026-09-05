@@ -69,10 +69,11 @@ export default function MenuDigitalPage() {
         </div>
 
         {/* Category Pills (Horizontal scrollable bar) */}
-        <div className="flex items-center justify-start sm:justify-center overflow-x-auto gap-2.5 mb-8 pb-2 scrollbar-none">
+        <div className="flex items-center justify-start sm:justify-center overflow-x-auto gap-2.5 mb-8 pb-2 scrollbar-none touch-pan-x">
           <button
+            type="button"
             onClick={() => setSelectedCategory('todo')}
-            className={`px-5 py-2 rounded-full font-display text-xs uppercase tracking-wider font-bold transition-all duration-300 shrink-0 cursor-pointer ${
+            className={`px-5 py-2.5 rounded-full font-display text-xs uppercase tracking-wider font-bold transition-all duration-200 shrink-0 cursor-pointer touch-manipulation active:scale-95 select-none ${
               selectedCategory === 'todo'
                 ? 'bg-[#FBBF24] text-black shadow-md shadow-amber-500/20'
                 : 'bg-[#0E172A] border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
@@ -82,9 +83,10 @@ export default function MenuDigitalPage() {
           </button>
           {categories.map((cat) => (
             <button
+              type="button"
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-5 py-2 rounded-full font-display text-xs uppercase tracking-wider font-bold transition-all duration-300 shrink-0 cursor-pointer ${
+              className={`px-5 py-2.5 rounded-full font-display text-xs uppercase tracking-wider font-bold transition-all duration-200 shrink-0 cursor-pointer touch-manipulation active:scale-95 select-none ${
                 selectedCategory === cat.id
                   ? 'bg-[#FBBF24] text-black shadow-md shadow-amber-500/20'
                   : 'bg-[#0E172A] border border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'
@@ -168,12 +170,13 @@ export default function MenuDigitalPage() {
 
                       {/* Plus Action Button (Lime green circle with plus icon) */}
                       <button
+                        type="button"
                         onClick={() => addToCart(prod)}
                         disabled={!prod.is_available}
                         aria-label={`Añadir ${prod.name}`}
-                        className="w-8 h-8 rounded-full bg-[#84cc16] hover:bg-[#65a30d] text-black font-extrabold flex items-center justify-center shadow-md hover:scale-110 active:scale-95 transition-transform disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                        className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-[#84cc16] hover:bg-[#65a30d] text-black font-extrabold flex items-center justify-center shadow-md active:scale-90 transition-transform disabled:opacity-30 disabled:cursor-not-allowed shrink-0 touch-manipulation cursor-pointer"
                       >
-                        <Plus className="w-4 h-4 stroke-[3]" />
+                        <Plus className="w-5 h-5 sm:w-4 sm:h-4 stroke-[3]" />
                       </button>
                     </div>
                   </div>

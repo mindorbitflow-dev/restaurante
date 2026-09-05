@@ -126,8 +126,10 @@ Gracias.`;
                 </span>
               </div>
               <button
+                type="button"
                 onClick={() => setIsCartOpen(false)}
-                className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200"
+                className="w-10 h-10 rounded-full text-slate-400 hover:text-white hover:bg-slate-800 transition-all duration-200 flex items-center justify-center touch-manipulation active:scale-95 cursor-pointer"
+                aria-label="Cerrar carrito"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -139,7 +141,7 @@ Gracias.`;
                 <div className="h-full flex flex-col items-center justify-center text-center py-20">
                   <ShoppingBag className="w-16 h-16 text-slate-700 mb-4 stroke-1 animate-pulse" />
                   <p className="font-sans font-medium text-slate-300 text-sm">Tu carrito está vacío.</p>
-                  <p className="text-xs text-slate-500 mt-2 max-w-xs leading-relaxed font-sans">
+                  <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed font-sans">
                     Explora nuestro menú digital y añade deliciosas hamburguesas, combos y bebidas.
                   </p>
                 </div>
@@ -171,27 +173,32 @@ Gracias.`;
 
                         {/* Quantity Counter & Delete */}
                         <div className="flex items-center gap-3">
-                          <div className="flex items-center bg-[#0E172A] border border-slate-700/80 rounded-full py-1 px-2.5">
+                          <div className="flex items-center bg-[#0E172A] border border-slate-700/80 rounded-full py-0.5 px-1.5">
                             <button
+                              type="button"
                               onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                              className="text-slate-400 hover:text-white p-0.5"
+                              className="text-slate-400 hover:text-white p-1.5 touch-manipulation active:scale-90 cursor-pointer"
+                              aria-label="Disminuir cantidad"
                             >
-                              <Minus className="w-3 h-3" />
+                              <Minus className="w-3.5 h-3.5" />
                             </button>
-                            <span className="text-white text-xs font-bold font-sans mx-2.5">
+                            <span className="text-white text-xs font-bold font-sans mx-2 min-w-[16px] text-center select-none">
                               {item.quantity}
                             </span>
                             <button
+                              type="button"
                               onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                              className="text-slate-400 hover:text-white p-0.5"
+                              className="text-slate-400 hover:text-white p-1.5 touch-manipulation active:scale-90 cursor-pointer"
+                              aria-label="Aumentar cantidad"
                             >
-                              <Plus className="w-3 h-3" />
+                              <Plus className="w-3.5 h-3.5" />
                             </button>
                           </div>
 
                           <button
+                            type="button"
                             onClick={() => removeFromCart(item.product.id)}
-                            className="text-slate-500 hover:text-red-400 transition-colors p-1"
+                            className="text-slate-500 hover:text-red-400 transition-colors p-2 touch-manipulation active:scale-90 cursor-pointer"
                             aria-label="Eliminar producto"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -308,7 +315,7 @@ Gracias.`;
                 <button
                   onClick={handleCheckout}
                   type="submit"
-                  className="w-full mt-3 py-4 rounded-full bg-[#16A34A] hover:bg-[#15803D] text-white font-sans text-sm uppercase tracking-widest font-black flex items-center justify-center gap-2.5 shadow-xl shadow-green-950/40 hover:scale-[1.02] active:scale-98 transition-all duration-300 cursor-pointer"
+                  className="w-full mt-3 py-4 rounded-full bg-[#16A34A] hover:bg-[#15803D] text-white font-sans text-sm uppercase tracking-widest font-black flex items-center justify-center gap-2.5 shadow-xl shadow-green-950/40 hover:scale-[1.02] active:scale-95 transition-all duration-300 cursor-pointer touch-manipulation"
                 >
                   <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                     <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.458L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436.002 9.858-4.415 9.86-9.854.001-2.636-1.02-5.11-2.871-6.963C16.6 1.94 14.135.918 11.998.918 6.562.918 2.14 5.335 2.138 10.774c-.001 1.719.452 3.4 1.311 4.887L2.43 21.053l5.59-1.467z" />

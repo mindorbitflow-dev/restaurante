@@ -471,15 +471,14 @@ export default function AdminPage() {
       setAuthLoading(false);
     } else {
       // Real Supabase Auth Login
-      if (!loginInput.includes('@')) {
-        setAuthLoading(false);
-        setAuthError('En modo Supabase debes ingresar el correo exacto registrado en Auth, no un nombre de usuario.');
-        return;
+      let resolvedEmail = loginInput;
+      if (!resolvedEmail.includes('@')) {
+        resolvedEmail = `${resolvedEmail}@restaurante.com`;
       }
 
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
-          email: loginInput,
+          email: resolvedEmail,
           password
         });
         
@@ -494,11 +493,17 @@ export default function AdminPage() {
             localStorage.setItem('kb_admin_lockout', String(lockTime));
             setAuthError('Tu cuenta ha sido bloqueada temporalmente por 3 minutos debido a 5 intentos fallidos de inicio de sesión.');
           } else {
-            setAuthError(`Credenciales incorrectas en Supabase: ${error.message}. Intentos restantes: ${5 - nextAttempts}.`);
+            let detail = error.message;
+            if (error.message.toLowerCase().includes('invalid login credentials')) {
+              detail = `Credenciales no válidas para "${resolvedEmail}". Recuerda que debes crear el usuario en Supabase (Authentication > Users o ejecutando el script supabase_admin_user.sql).`;
+            } else if (error.message.toLowerCase().includes('email not confirmed')) {
+              detail = `El correo "${resolvedEmail}" no ha sido confirmado en Supabase. En Supabase > Authentication > Users activa "Auto-confirm user".`;
+            }
+            setAuthError(`${detail} (Intentos restantes: ${5 - nextAttempts})`);
           }
         } else {
           setIsAuthenticated(true);
-          const activeEmail = data.user?.email || loginInput;
+          const activeEmail = data.user?.email || resolvedEmail;
           setCurrentUserEmail(activeEmail);
           localStorage.setItem('kb_admin_session', activeEmail);
           setFailedAttempts(0);
@@ -1174,8 +1179,24 @@ export default function AdminPage() {
           </div>
 
           {authError && (
-            <div className="p-3 rounded-lg bg-red-950/20 border border-red-500/30 text-red-400 text-xs mb-6 text-center">
-              {authError}
+            <div className="p-3 rounded-lg bg-red-950/20 border border-red-500/30 text-red-400 text-xs mb-6 text-center space-y-2">
+              <p>{authError}</p>
+              {lockoutTime && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLockoutTime(null);
+                    setFailedAttempts(0);
+                    setSecondsRemaining(0);
+                    localStorage.removeItem('admin_lockout');
+                    localStorage.removeItem('kb_admin_lockout');
+                    setAuthError('');
+                  }}
+                  className="text-[11px] text-amber-400 hover:text-amber-300 underline font-semibold transition-colors"
+                >
+                  Restablecer bloqueo de intentos
+                </button>
+              )}
             </div>
           )}
 

@@ -9,12 +9,15 @@ import Header from '@/components/shared/Header';
 import Footer from '@/components/shared/Footer';
 import CartSidebar from '@/components/menu-digital/CartSidebar';
 import ReservationForm from '@/components/menu-digital/ReservationForm';
+import ProductDetailModal from '@/components/menu-digital/ProductDetailModal';
+import { Product } from '@/lib/types';
 
 export default function MenuDigitalPage() {
   const { profile, categories, products, loading } = useBusiness();
   const { addToCart, setIsCartOpen, getCartCount } = useCart();
   const [selectedCategory, setSelectedCategory] = useState('todo');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const formatCOP = (value: number) => {
     return new Intl.NumberFormat('es-CO', {
@@ -117,7 +120,8 @@ export default function MenuDigitalPage() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.25 }}
-                  className="bg-[#0E172A] border border-slate-800 hover:border-[#FBBF24]/40 rounded-2xl p-3 sm:p-3.5 flex items-center gap-3.5 shadow-xl transition-all group relative overflow-hidden"
+                  onClick={() => setSelectedProduct(prod)}
+                  className="bg-[#0E172A] border border-slate-800 hover:border-[#FBBF24]/50 hover:bg-[#111d35] rounded-2xl p-3 sm:p-3.5 flex items-center gap-3.5 shadow-xl transition-all group relative overflow-hidden cursor-pointer touch-manipulation active:scale-[0.99]"
                 >
                   {/* Left: Square Food Image */}
                   <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden bg-black/40 shrink-0 relative">
@@ -171,7 +175,10 @@ export default function MenuDigitalPage() {
                       {/* Plus Action Button (Lime green circle with plus icon) */}
                       <button
                         type="button"
-                        onClick={() => addToCart(prod)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToCart(prod);
+                        }}
                         disabled={!prod.is_available}
                         aria-label={`Añadir ${prod.name}`}
                         className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-[#84cc16] hover:bg-[#65a30d] text-black font-extrabold flex items-center justify-center shadow-md active:scale-90 transition-transform disabled:opacity-30 disabled:cursor-not-allowed shrink-0 touch-manipulation cursor-pointer"
@@ -228,6 +235,17 @@ export default function MenuDigitalPage() {
           )}
         </button>
       </div>
+
+      {/* Product Detailed Preview Modal */}
+      <ProductDetailModal
+        product={selectedProduct}
+        isOpen={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        categoryName={categories.find((c) => c.id === selectedProduct?.category_id)?.name}
+        onAddToCart={(product, quantity) => {
+          addToCart(product, quantity);
+        }}
+      />
 
       <Footer />
     </div>

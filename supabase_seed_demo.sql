@@ -24,6 +24,7 @@ INSERT INTO business_profile (
     about_text,
     about_image,
     whatsapp_number,
+    
     address,
     google_maps_embed,
     working_hours,

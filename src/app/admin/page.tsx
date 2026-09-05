@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Utensils, FolderHeart, CalendarCheck, Settings, 
   Plus, Edit, Trash2, Check, X, LogOut, ArrowRight, ShieldCheck,
-  TrendingUp, Star, Phone, DollarSign, Calendar, RotateCcw, AlertTriangle
+  TrendingUp, Star, Phone, DollarSign, Calendar, RotateCcw, AlertTriangle,
+  CheckCircle2, AlertCircle, Loader2, Info
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useBusiness } from '@/context/BusinessContext';
@@ -146,9 +147,63 @@ export default function AdminPage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [resLoading, setResLoading] = useState(false);
 
+  // Floating Toast Notification State
+  const [toast, setToast] = useState<{
+    id: number;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'info';
+  } | null>(null);
+
+  const showToast = (title: string, message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    const id = Date.now();
+    setToast({ id, title, message, type });
+    setTimeout(() => {
+      setToast(current => (current?.id === id ? null : current));
+    }, 4500);
+  };
+
+  // Custom Responsive Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    isDanger?: boolean;
+    onConfirm: () => void | Promise<void>;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Confirmar',
+    cancelText: 'Cancelar',
+    isDanger: false,
+    onConfirm: () => {},
+  });
+
+  const requestConfirm = (
+    title: string,
+    message: string,
+    onConfirm: () => void | Promise<void>,
+    options?: { confirmText?: string; isDanger?: boolean }
+  ) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      confirmText: options?.confirmText || 'Confirmar',
+      cancelText: 'Cancelar',
+      isDanger: options?.isDanger ?? true,
+      onConfirm,
+    });
+  };
+
   // Forms state
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const [productSubmitting, setProductSubmitting] = useState(false);
+  const [productFormError, setProductFormError] = useState('');
   const [productForm, setProductForm] = useState({
     name: '',
     description: '',
@@ -163,6 +218,8 @@ export default function AdminPage() {
 
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [categorySubmitting, setCategorySubmitting] = useState(false);
+  const [categoryFormError, setCategoryFormError] = useState('');
   const [categoryForm, setCategoryForm] = useState({
     name: '',
     slug: '',
@@ -171,6 +228,8 @@ export default function AdminPage() {
 
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [eventSubmitting, setEventSubmitting] = useState(false);
+  const [eventFormError, setEventFormError] = useState('');
   const [eventForm, setEventForm] = useState({
     title: '',
     description: '',
@@ -182,6 +241,7 @@ export default function AdminPage() {
   // Settings form state
   const [settingsForm, setSettingsForm] = useState<BusinessProfile | null>(null);
   const [settingsSuccess, setSettingsSuccess] = useState(false);
+  const [settingsSubmitting, setSettingsSubmitting] = useState(false);
 
   // Sync business contexts to state
   useEffect(() => {
@@ -311,8 +371,9 @@ export default function AdminPage() {
         await refreshData();
         await loadDeletedItems();
       }
+      showToast('¡Producto Restaurado!', `"${prod.name}" fue devuelto al menú exitosamente.`, 'success');
     } catch (e: any) {
-      alert('Error al restaurar el producto: ' + e.message);
+      showToast('Error al restaurar', e.message, 'error');
     }
   };
 
@@ -337,84 +398,111 @@ export default function AdminPage() {
         await refreshData();
         await loadDeletedItems();
       }
+      showToast('¡Evento Restaurado!', `"${evt.title}" volvió a estar activo.`, 'success');
     } catch (e: any) {
-      alert('Error al restaurar el evento: ' + e.message);
+      showToast('Error al restaurar', e.message, 'error');
     }
   };
 
-  const handlePermanentDeleteProduct = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar permanentemente este producto? Esta acción no se puede deshacer.')) return;
-    try {
-      if (isMock) {
-        const nextDeleted = deletedProducts.filter(p => p.id !== id);
-        setDeletedProducts(nextDeleted);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('demo_deleted_products', JSON.stringify(nextDeleted));
+  const handlePermanentDeleteProduct = (id: string) => {
+    const prod = deletedProducts.find(p => p.id === id);
+    const prodName = prod?.name || 'este producto';
+
+    requestConfirm(
+      '¿Eliminar producto definitivamente?',
+      `¿Deseas borrar permanentemente "${prodName}"? Esta acción no se puede revertir.`,
+      async () => {
+        try {
+          if (isMock) {
+            const nextDeleted = deletedProducts.filter(p => p.id !== id);
+            setDeletedProducts(nextDeleted);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('demo_deleted_products', JSON.stringify(nextDeleted));
+            }
+          } else {
+            const { error } = await supabase
+              .from('products')
+              .delete()
+              .eq('id', id);
+            if (error) throw error;
+            await loadDeletedItems();
+          }
+          showToast('Producto Eliminado', `"${prodName}" fue purgado definitivamente.`, 'info');
+        } catch (e: any) {
+          showToast('Error al eliminar', e.message, 'error');
         }
-      } else {
-        const { error } = await supabase
-          .from('products')
-          .delete()
-          .eq('id', id);
-        if (error) throw error;
-        await loadDeletedItems();
-      }
-    } catch (e: any) {
-      alert('Error al eliminar definitivamente: ' + e.message);
-    }
+      },
+      { confirmText: 'Eliminar Definitivamente', isDanger: true }
+    );
   };
 
-  const handlePermanentDeleteEvent = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar permanentemente este evento? Esta acción no se puede deshacer.')) return;
-    try {
-      if (isMock) {
-        const nextDeleted = deletedEvents.filter(e => e.id !== id);
-        setDeletedEvents(nextDeleted);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('demo_deleted_events', JSON.stringify(nextDeleted));
+  const handlePermanentDeleteEvent = (id: string) => {
+    const evt = deletedEvents.find(e => e.id === id);
+    const evtTitle = evt?.title || 'este evento';
+
+    requestConfirm(
+      '¿Eliminar evento definitivamente?',
+      `¿Deseas borrar permanentemente "${evtTitle}"? Esta acción no se puede revertir.`,
+      async () => {
+        try {
+          if (isMock) {
+            const nextDeleted = deletedEvents.filter(e => e.id !== id);
+            setDeletedEvents(nextDeleted);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('demo_deleted_events', JSON.stringify(nextDeleted));
+            }
+          } else {
+            const { error } = await supabase
+              .from('events')
+              .delete()
+              .eq('id', id);
+            if (error) throw error;
+            await loadDeletedItems();
+          }
+          showToast('Evento Eliminado', `"${evtTitle}" fue purgado definitivamente.`, 'info');
+        } catch (e: any) {
+          showToast('Error al eliminar', e.message, 'error');
         }
-      } else {
-        const { error } = await supabase
-          .from('events')
-          .delete()
-          .eq('id', id);
-        if (error) throw error;
-        await loadDeletedItems();
-      }
-    } catch (e: any) {
-      alert('Error al eliminar definitivamente: ' + e.message);
-    }
+      },
+      { confirmText: 'Eliminar Definitivamente', isDanger: true }
+    );
   };
 
-  const handleEmptyTrash = async () => {
-    if (!confirm('¿Estás seguro de vaciar la papelera de reciclaje? Todos los elementos se eliminarán de forma permanente y no se podrán recuperar.')) return;
-    try {
-      if (isMock) {
-        setDeletedProducts([]);
-        setDeletedEvents([]);
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('demo_deleted_products');
-          localStorage.removeItem('demo_deleted_events');
+  const handleEmptyTrash = () => {
+    requestConfirm(
+      '¿Vaciar papelera de reciclaje?',
+      'Se borrarán de forma permanente todos los productos y eventos de la papelera. Esta acción no se puede deshacer.',
+      async () => {
+        try {
+          if (isMock) {
+            setDeletedProducts([]);
+            setDeletedEvents([]);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('demo_deleted_products');
+              localStorage.removeItem('demo_deleted_events');
+            }
+          } else {
+            const { error: prodErr } = await supabase
+              .from('products')
+              .delete()
+              .not('deleted_at', 'is', null);
+
+            const { error: evtErr } = await supabase
+              .from('events')
+              .delete()
+              .not('deleted_at', 'is', null);
+
+            if (prodErr) throw prodErr;
+            if (evtErr) throw evtErr;
+            await loadDeletedItems();
+          }
+          showToast('Papelera Vaciada', 'Todos los elementos eliminados fueron purgados exitosamente.', 'info');
+        } catch (e: any) {
+          showToast('Error al vaciar papelera', e.message, 'error');
         }
-      } else {
-        const { error: prodErr } = await supabase
-          .from('products')
-          .delete()
-          .not('deleted_at', 'is', null);
-
-        const { error: evtErr } = await supabase
-          .from('events')
-          .delete()
-          .not('deleted_at', 'is', null);
-
-        if (prodErr) throw prodErr;
-        if (evtErr) throw evtErr;
-
-        await loadDeletedItems();
-      }
-    } catch (e: any) {
-      alert('Error al vaciar la papelera: ' + e.message);
-    }
+      },
+      { confirmText: 'Vaciar Papelera', isDanger: true }
+    );
   };
 
   useEffect(() => {
@@ -637,23 +725,40 @@ export default function AdminPage() {
   // ==========================================
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setProductFormError('');
+
     const pPrice = Number(productForm.price);
     const pOrigPrice = productForm.original_price ? Number(productForm.original_price) : null;
     const pTags = productForm.tags.split(',').map(t => t.trim()).filter(Boolean);
 
-    if (!productForm.name.trim() || !productForm.category_id || pPrice <= 0) {
-      alert('Por favor rellena el nombre, categoría y un precio válido.');
+    if (!productForm.name.trim()) {
+      setProductFormError('Por favor ingresa el nombre del platillo o bebida.');
       return;
     }
 
+    if (!productForm.category_id) {
+      setProductFormError('Debes seleccionar una categoría.');
+      return;
+    }
+
+    if (isNaN(pPrice) || pPrice <= 0) {
+      setProductFormError('Ingresa un precio de venta válido mayor a $0 COP.');
+      return;
+    }
+
+    setProductSubmitting(true);
+
     try {
+      const savedName = productForm.name.trim();
+      const wasEditing = !!editingProduct;
+
       if (isMock) {
         let updatedProds: Product[] = [];
         if (editingProduct) {
           // Edit local mock state
           updatedProds = localProducts.map(p => p.id === editingProduct.id ? {
             ...p,
-            name: productForm.name.trim(),
+            name: savedName,
             description: productForm.description.trim(),
             price: pPrice,
             original_price: pOrigPrice || undefined,
@@ -668,7 +773,7 @@ export default function AdminPage() {
           const newProd: Product = {
             id: `prod-${Date.now()}`,
             category_id: productForm.category_id,
-            name: productForm.name.trim(),
+            name: savedName,
             description: productForm.description.trim(),
             price: pPrice,
             original_price: pOrigPrice || undefined,
@@ -688,7 +793,7 @@ export default function AdminPage() {
           const { error } = await supabase
             .from('products')
             .update({
-              name: productForm.name.trim(),
+              name: savedName,
               description: productForm.description.trim(),
               price: pPrice,
               original_price: pOrigPrice,
@@ -704,7 +809,7 @@ export default function AdminPage() {
           const { error } = await supabase
             .from('products')
             .insert([{
-              name: productForm.name.trim(),
+              name: savedName,
               description: productForm.description.trim(),
               price: pPrice,
               original_price: pOrigPrice,
@@ -720,19 +825,32 @@ export default function AdminPage() {
         await refreshData();
       }
 
+      // Cerrar panel modal de inmediato
       setIsProductModalOpen(false);
       setEditingProduct(null);
       setProductForm({
         name: '', description: '', price: 0, original_price: '',
         category_id: '', image_url: '', tags: '', is_available: true, is_promotion: false
       });
+
+      // Confirmación visual
+      showToast(
+        wasEditing ? '¡Producto Actualizado!' : '¡Producto Agregado!',
+        wasEditing
+          ? `Los cambios en "${savedName}" se guardaron correctamente.`
+          : `"${savedName}" fue añadido exitosamente al catálogo.`,
+        'success'
+      );
     } catch (e: any) {
-      alert('Error en base de datos: ' + e.message);
+      setProductFormError('Error en base de datos: ' + e.message);
+    } finally {
+      setProductSubmitting(false);
     }
   };
 
   const handleEditProduct = (prod: Product) => {
     setEditingProduct(prod);
+    setProductFormError('');
     setProductForm({
       name: prod.name,
       description: prod.description || '',
@@ -747,35 +865,43 @@ export default function AdminPage() {
     setIsProductModalOpen(true);
   };
 
-  const handleDeleteProduct = async (id: string) => {
-    if (!confirm('¿Estás seguro de enviar este producto a la papelera? Podrás recuperarlo durante 30 días.')) return;
+  const handleDeleteProduct = (id: string) => {
+    const prod = localProducts.find(p => p.id === id);
+    const prodName = prod?.name || 'este producto';
 
-    try {
-      if (isMock) {
-        const prod = localProducts.find(p => p.id === id);
-        if (prod) {
-          const softDeleted: Product = { ...prod, deleted_at: new Date().toISOString() };
-          const nextDeleted = [softDeleted, ...deletedProducts];
-          setDeletedProducts(nextDeleted);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('demo_deleted_products', JSON.stringify(nextDeleted));
+    requestConfirm(
+      '¿Enviar producto a la papelera?',
+      `¿Deseas mover "${prodName}" a la papelera de reciclaje? Podrás recuperarlo durante 30 días.`,
+      async () => {
+        try {
+          if (isMock) {
+            if (prod) {
+              const softDeleted: Product = { ...prod, deleted_at: new Date().toISOString() };
+              const nextDeleted = [softDeleted, ...deletedProducts];
+              setDeletedProducts(nextDeleted);
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('demo_deleted_products', JSON.stringify(nextDeleted));
+              }
+              const updatedProds = localProducts.filter(p => p.id !== id);
+              setLocalProducts(updatedProds);
+              saveMockProducts(updatedProds);
+            }
+          } else {
+            const { error } = await supabase
+              .from('products')
+              .update({ deleted_at: new Date().toISOString() })
+              .eq('id', id);
+            if (error) throw error;
+            await refreshData();
+            await loadDeletedItems();
           }
-          const updatedProds = localProducts.filter(p => p.id !== id);
-          setLocalProducts(updatedProds);
-          saveMockProducts(updatedProds);
+          showToast('Producto en Papelera', `"${prodName}" fue trasladado a la papelera.`, 'info');
+        } catch (e: any) {
+          showToast('Error', e.message, 'error');
         }
-      } else {
-        const { error } = await supabase
-          .from('products')
-          .update({ deleted_at: new Date().toISOString() })
-          .eq('id', id);
-        if (error) throw error;
-        await refreshData();
-        await loadDeletedItems();
-      }
-    } catch (e: any) {
-      alert('Error al enviar a la papelera: ' + e.message);
-    }
+      },
+      { confirmText: 'Mover a Papelera', isDanger: true }
+    );
   };
 
   const toggleAvailability = async (prod: Product) => {
@@ -793,8 +919,13 @@ export default function AdminPage() {
         if (error) throw error;
         await refreshData();
       }
+      showToast(
+        nextAvail ? 'Producto Disponible' : 'Producto Marcado Agotado',
+        `"${prod.name}" ahora está ${nextAvail ? 'disponible' : 'agotado'} en el menú.`,
+        'info'
+      );
     } catch (e: any) {
-      alert(e.message);
+      showToast('Error', 'No se pudo cambiar la disponibilidad: ' + e.message, 'error');
     }
   };
 
@@ -803,26 +934,34 @@ export default function AdminPage() {
   // ==========================================
   const handleCategorySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!categoryForm.name.trim() || !categoryForm.slug.trim()) {
-      alert('Por favor ingresa nombre y slug.');
+    setCategoryFormError('');
+
+    if (!categoryForm.name.trim()) {
+      setCategoryFormError('Por favor ingresa el nombre de la categoría.');
       return;
     }
 
+    const catSlug = categoryForm.slug.trim() || categoryForm.name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+
+    setCategorySubmitting(true);
     try {
+      const savedName = categoryForm.name.trim();
+      const wasEditing = !!editingCategory;
+
       if (isMock) {
         let updatedCats: Category[] = [];
         if (editingCategory) {
           updatedCats = localCategories.map(c => c.id === editingCategory.id ? {
             ...c,
-            name: categoryForm.name.trim(),
-            slug: categoryForm.slug.trim().toLowerCase(),
+            name: savedName,
+            slug: catSlug,
             order_index: Number(categoryForm.order_index)
           } : c);
         } else {
           const newCat: Category = {
             id: `cat-${Date.now()}`,
-            name: categoryForm.name.trim(),
-            slug: categoryForm.slug.trim().toLowerCase(),
+            name: savedName,
+            slug: catSlug,
             order_index: Number(categoryForm.order_index) || localCategories.length + 1,
             is_active: true
           };
@@ -835,8 +974,8 @@ export default function AdminPage() {
           const { error } = await supabase
             .from('categories')
             .update({
-              name: categoryForm.name.trim(),
-              slug: categoryForm.slug.trim().toLowerCase(),
+              name: savedName,
+              slug: catSlug,
               order_index: Number(categoryForm.order_index)
             })
             .eq('id', editingCategory.id);
@@ -845,8 +984,8 @@ export default function AdminPage() {
           const { error } = await supabase
             .from('categories')
             .insert([{
-              name: categoryForm.name.trim(),
-              slug: categoryForm.slug.trim().toLowerCase(),
+              name: savedName,
+              slug: catSlug,
               order_index: Number(categoryForm.order_index) || localCategories.length + 1
             }]);
           if (error) throw error;
@@ -857,13 +996,22 @@ export default function AdminPage() {
       setIsCategoryModalOpen(false);
       setEditingCategory(null);
       setCategoryForm({ name: '', slug: '', order_index: 0 });
+
+      showToast(
+        wasEditing ? '¡Categoría Actualizada!' : '¡Categoría Creada!',
+        `La categoría "${savedName}" se guardó exitosamente.`,
+        'success'
+      );
     } catch (e: any) {
-      alert(e.message);
+      setCategoryFormError('Error: ' + e.message);
+    } finally {
+      setCategorySubmitting(false);
     }
   };
 
   const handleEditCategory = (cat: Category) => {
     setEditingCategory(cat);
+    setCategoryFormError('');
     setCategoryForm({
       name: cat.name,
       slug: cat.slug,
@@ -872,21 +1020,31 @@ export default function AdminPage() {
     setIsCategoryModalOpen(true);
   };
 
-  const handleDeleteCategory = async (id: string) => {
-    if (!confirm('¿Estás seguro de eliminar esta categoría?')) return;
-    try {
-      if (isMock) {
-        const updatedCats = localCategories.filter(c => c.id !== id);
-        setLocalCategories(updatedCats);
-        saveMockCategories(updatedCats);
-      } else {
-        const { error } = await supabase.from('categories').delete().eq('id', id);
-        if (error) throw error;
-        await refreshData();
-      }
-    } catch (e: any) {
-      alert(e.message);
-    }
+  const handleDeleteCategory = (id: string) => {
+    const cat = localCategories.find(c => c.id === id);
+    const catName = cat?.name || 'esta categoría';
+
+    requestConfirm(
+      '¿Eliminar categoría?',
+      `¿Deseas eliminar permanentemente "${catName}"? Los platillos pertenecientes a esta categoría permanecerán intactos.`,
+      async () => {
+        try {
+          if (isMock) {
+            const updatedCats = localCategories.filter(c => c.id !== id);
+            setLocalCategories(updatedCats);
+            saveMockCategories(updatedCats);
+          } else {
+            const { error } = await supabase.from('categories').delete().eq('id', id);
+            if (error) throw error;
+            await refreshData();
+          }
+          showToast('Categoría Eliminada', `"${catName}" fue eliminada.`, 'info');
+        } catch (e: any) {
+          showToast('Error', e.message, 'error');
+        }
+      },
+      { confirmText: 'Eliminar Categoría', isDanger: true }
+    );
   };
 
   // ==========================================
@@ -904,8 +1062,13 @@ export default function AdminPage() {
         if (error) throw error;
         await loadReservations();
       }
+      showToast(
+        'Reserva Actualizada',
+        `La reserva fue ${nextStatus === 'confirmed' ? 'confirmada' : 'cancelada'} correctamente.`,
+        'info'
+      );
     } catch (e: any) {
-      alert(e.message);
+      showToast('Error', e.message, 'error');
     }
   };
 
@@ -914,18 +1077,29 @@ export default function AdminPage() {
   // ==========================================
   const handleEventSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!eventForm.title.trim() || !eventForm.event_date) {
-      alert('Por favor ingresa un título y una fecha.');
+    setEventFormError('');
+
+    if (!eventForm.title.trim()) {
+      setEventFormError('Por favor ingresa el título del evento.');
       return;
     }
 
+    if (!eventForm.event_date) {
+      setEventFormError('Debes seleccionar fecha y hora para el evento.');
+      return;
+    }
+
+    setEventSubmitting(true);
     try {
+      const savedTitle = eventForm.title.trim();
+      const wasEditing = !!editingEvent;
+
       if (isMock) {
         let updatedEvts: Event[] = [];
         if (editingEvent) {
           updatedEvts = localEvents.map(evt => evt.id === editingEvent.id ? {
             ...evt,
-            title: eventForm.title.trim(),
+            title: savedTitle,
             description: eventForm.description.trim(),
             event_date: eventForm.event_date,
             image_url: eventForm.image_url.trim() || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80',
@@ -934,7 +1108,7 @@ export default function AdminPage() {
         } else {
           const newEvt: Event = {
             id: `evt-${Date.now()}`,
-            title: eventForm.title.trim(),
+            title: savedTitle,
             description: eventForm.description.trim(),
             event_date: eventForm.event_date,
             image_url: eventForm.image_url.trim() || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80',
@@ -949,7 +1123,7 @@ export default function AdminPage() {
           const { error } = await supabase
             .from('events')
             .update({
-              title: eventForm.title.trim(),
+              title: savedTitle,
               description: eventForm.description.trim(),
               event_date: eventForm.event_date,
               image_url: eventForm.image_url.trim() || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80',
@@ -961,7 +1135,7 @@ export default function AdminPage() {
           const { error } = await supabase
             .from('events')
             .insert([{
-              title: eventForm.title.trim(),
+              title: savedTitle,
               description: eventForm.description.trim(),
               event_date: eventForm.event_date,
               image_url: eventForm.image_url.trim() || 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80',
@@ -975,13 +1149,22 @@ export default function AdminPage() {
       setIsEventModalOpen(false);
       setEditingEvent(null);
       setEventForm({ title: '', description: '', event_date: '', image_url: '', is_active: true });
+
+      showToast(
+        wasEditing ? '¡Evento Actualizado!' : '¡Evento Creado!',
+        `El evento "${savedTitle}" fue guardado exitosamente.`,
+        'success'
+      );
     } catch (e: any) {
-      alert(e.message);
+      setEventFormError('Error: ' + e.message);
+    } finally {
+      setEventSubmitting(false);
     }
   };
 
   const handleEditEvent = (evt: Event) => {
     setEditingEvent(evt);
+    setEventFormError('');
     let formattedDate = '';
     try {
       const date = new Date(evt.event_date);
@@ -999,34 +1182,43 @@ export default function AdminPage() {
     setIsEventModalOpen(true);
   };
 
-  const handleDeleteEvent = async (id: string) => {
-    if (!confirm('¿Estás seguro de enviar este evento a la papelera? Podrás recuperarlo durante 30 días.')) return;
-    try {
-      if (isMock) {
-        const evt = localEvents.find(e => e.id === id);
-        if (evt) {
-          const softDeleted: Event = { ...evt, deleted_at: new Date().toISOString() };
-          const nextDeleted = [softDeleted, ...deletedEvents];
-          setDeletedEvents(nextDeleted);
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('demo_deleted_events', JSON.stringify(nextDeleted));
+  const handleDeleteEvent = (id: string) => {
+    const evt = localEvents.find(e => e.id === id);
+    const evtTitle = evt?.title || 'este evento';
+
+    requestConfirm(
+      '¿Enviar evento a la papelera?',
+      `¿Deseas mover "${evtTitle}" a la papelera de reciclaje? Podrás recuperarlo en cualquier momento.`,
+      async () => {
+        try {
+          if (isMock) {
+            if (evt) {
+              const softDeleted: Event = { ...evt, deleted_at: new Date().toISOString() };
+              const nextDeleted = [softDeleted, ...deletedEvents];
+              setDeletedEvents(nextDeleted);
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('demo_deleted_events', JSON.stringify(nextDeleted));
+              }
+              const updatedEvts = localEvents.filter(e => e.id !== id);
+              setLocalEvents(updatedEvts);
+              saveMockEvents(updatedEvts);
+            }
+          } else {
+            const { error } = await supabase
+              .from('events')
+              .update({ deleted_at: new Date().toISOString() })
+              .eq('id', id);
+            if (error) throw error;
+            await refreshData();
+            await loadDeletedItems();
           }
-          const updatedEvts = localEvents.filter(e => e.id !== id);
-          setLocalEvents(updatedEvts);
-          saveMockEvents(updatedEvts);
+          showToast('Evento en Papelera', `"${evtTitle}" fue enviado a la papelera.`, 'info');
+        } catch (e: any) {
+          showToast('Error', e.message, 'error');
         }
-      } else {
-        const { error } = await supabase
-          .from('events')
-          .update({ deleted_at: new Date().toISOString() })
-          .eq('id', id);
-        if (error) throw error;
-        await refreshData();
-        await loadDeletedItems();
-      }
-    } catch (e: any) {
-      alert('Error al enviar a la papelera: ' + e.message);
-    }
+      },
+      { confirmText: 'Mover a Papelera', isDanger: true }
+    );
   };
 
   const toggleEventActive = async (evt: Event) => {
@@ -1044,8 +1236,13 @@ export default function AdminPage() {
         if (error) throw error;
         await refreshData();
       }
+      showToast(
+        nextActive ? 'Evento Publicado' : 'Evento Pausado',
+        `"${evt.title}" ahora está ${nextActive ? 'visible' : 'oculto'} en la página principal.`,
+        'info'
+      );
     } catch (e: any) {
-      alert(e.message);
+      showToast('Error', e.message, 'error');
     }
   };
 
@@ -1056,12 +1253,14 @@ export default function AdminPage() {
     e.preventDefault();
     if (!settingsForm) return;
 
+    setSettingsSubmitting(true);
     try {
       if (isMock) {
         // Mock save
         saveMockProfile(settingsForm);
         setSettingsSuccess(true);
         setTimeout(() => setSettingsSuccess(false), 3000);
+        showToast('¡Configuración Guardada!', 'Los datos del restaurante se actualizaron correctamente en el modo demo.', 'success');
       } else {
         // Supabase DB save
         const { error } = await supabase
@@ -1081,9 +1280,12 @@ export default function AdminPage() {
         setSettingsSuccess(true);
         await refreshData();
         setTimeout(() => setSettingsSuccess(false), 3000);
+        showToast('¡Configuración Guardada!', 'Los cambios en los datos del restaurante se aplicaron en la base de datos.', 'success');
       }
     } catch (e: any) {
-      alert('Error al guardar: ' + e.message);
+      showToast('Error al guardar', e.message, 'error');
+    } finally {
+      setSettingsSubmitting(false);
     }
   };
 
@@ -1139,7 +1341,8 @@ export default function AdminPage() {
         };
         setMockUsers(updatedUsers);
         localStorage.setItem('kb_mock_users', JSON.stringify(updatedUsers));
-        setPassSuccess('¡Contraseña actualizada con éxito en el almacenamiento local!');
+        setPassSuccess('¡Contraseña actualizada con éxito!');
+        showToast('¡Contraseña Actualizada!', 'Tu contraseña ha sido modificada con éxito.', 'success');
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
@@ -1153,6 +1356,7 @@ export default function AdminPage() {
           setPassError(error.message);
         } else {
           setPassSuccess('¡Contraseña actualizada con éxito en Supabase Auth!');
+          showToast('¡Contraseña Actualizada!', 'Tu contraseña ha sido modificada con éxito.', 'success');
           setCurrentPassword('');
           setNewPassword('');
           setConfirmPassword('');
@@ -1548,15 +1752,24 @@ export default function AdminPage() {
                 <p className="text-gray-400 text-xs mt-1">Crea, edita o elimina platos, bebidas y promociones de tu menú digital.</p>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   setEditingProduct(null);
+                  setProductFormError('');
                   setProductForm({
-                    name: '', description: '', price: 0, original_price: '',
-                    category_id: localCategories[0]?.id || '', image_url: '', tags: '', is_available: true, is_promotion: false
+                    name: '',
+                    description: '',
+                    price: 0,
+                    original_price: '',
+                    category_id: localCategories[0]?.id || '',
+                    image_url: '',
+                    tags: '',
+                    is_available: true,
+                    is_promotion: false
                   });
                   setIsProductModalOpen(true);
                 }}
-                className="px-5 py-3 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-sans text-xs uppercase tracking-widest font-bold flex items-center gap-2 hover:shadow-lg hover:scale-103 transition-all duration-300"
+                className="px-5 py-3 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-sans text-xs uppercase tracking-widest font-bold flex items-center gap-2 hover:shadow-lg hover:scale-103 transition-all duration-300 touch-manipulation active:scale-95 cursor-pointer min-h-[44px]"
               >
                 <Plus className="w-4 h-4 stroke-[3]" />
                 Agregar Producto
@@ -1649,11 +1862,35 @@ export default function AdminPage() {
 
             {/* PRODUCT EDIT/CREATE DIALOG MODAL */}
             {isProductModalOpen && (
-              <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="w-full max-w-xl p-8 rounded-2xl bg-[#0E172A] border border-[#FBBF24]/40/15 shadow-2xl relative overflow-y-auto max-h-[90vh]">
-                  <h3 className="font-display text-white text-xl font-bold tracking-wide mb-6 border-b border-white/5 pb-3">
-                    {editingProduct ? 'Editar Platillo / Bebida' : 'Agregar Platillo / Bebida'}
-                  </h3>
+              <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
+                <div className="w-full max-w-xl p-5 sm:p-8 rounded-2xl bg-[#0E172A] border border-[#FBBF24]/20 shadow-2xl relative max-h-[90dvh] overflow-y-auto overscroll-contain my-auto">
+                  
+                  {/* Modal Header with Title & Close button */}
+                  <div className="flex items-center justify-between mb-5 pb-3 border-b border-white/5">
+                    <h3 className="font-display text-white text-lg sm:text-xl font-bold tracking-wide">
+                      {editingProduct ? 'Editar Platillo / Bebida' : 'Agregar Platillo / Bebida'}
+                    </h3>
+                    <button
+                      type="button"
+                      disabled={productSubmitting}
+                      onClick={() => {
+                        setIsProductModalOpen(false);
+                        setProductFormError('');
+                      }}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors touch-manipulation cursor-pointer"
+                      aria-label="Cerrar modal"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Inline Form Error Notification */}
+                  {productFormError && (
+                    <div className="mb-4 p-3.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs font-sans flex items-center gap-2.5 animate-fade-in">
+                      <AlertCircle className="w-4.5 h-4.5 shrink-0 text-red-400" />
+                      <span>{productFormError}</span>
+                    </div>
+                  )}
 
                   <form onSubmit={handleProductSubmit} className="space-y-4 text-sm">
                     {/* Nombre */}
@@ -1666,7 +1903,8 @@ export default function AdminPage() {
                         required
                         value={productForm.name}
                         onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
-                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none"
+                        placeholder="Ej. Hamburguesa Doble Queso BBQ"
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-base sm:text-sm"
                       />
                     </div>
 
@@ -1679,7 +1917,8 @@ export default function AdminPage() {
                         rows={2}
                         value={productForm.description}
                         onChange={(e) => setProductForm(prev => ({ ...prev, description: e.target.value }))}
-                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2 text-white focus:outline-none"
+                        placeholder="Ingredientes, preparación y detalles especiales..."
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2 text-white focus:outline-none text-base sm:text-sm resize-none"
                       />
                     </div>
 
@@ -1691,16 +1930,18 @@ export default function AdminPage() {
                       <select
                         value={productForm.category_id}
                         onChange={(e) => setProductForm(prev => ({ ...prev, category_id: e.target.value }))}
-                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none appearance-none"
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none cursor-pointer text-base sm:text-sm"
                       >
                         {localCategories.map(c => (
-                          <option key={c.id} value={c.id} className="bg-[#0E172A]">{c.name}</option>
+                          <option key={c.id} value={c.id} className="bg-[#0E172A] text-white">
+                            {c.name}
+                          </option>
                         ))}
                       </select>
                     </div>
 
                     {/* Precios Grid */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">
                           Precio Venta (COP) *
@@ -1708,21 +1949,23 @@ export default function AdminPage() {
                         <input
                           type="number"
                           required
-                          value={productForm.price}
-                          onChange={(e) => setProductForm(prev => ({ ...prev, price: Number(e.target.value) }))}
-                          className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none"
+                          min="1"
+                          placeholder="Ej. 28000"
+                          value={productForm.price === 0 ? '' : productForm.price}
+                          onChange={(e) => setProductForm(prev => ({ ...prev, price: e.target.value === '' ? 0 : Number(e.target.value) }))}
+                          className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-base sm:text-sm"
                         />
                       </div>
                       <div>
                         <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-1">
-                          Precio Original (COP)
+                          Precio Original (Opcional para ofertas)
                         </label>
                         <input
                           type="number"
                           value={productForm.original_price}
                           onChange={(e) => setProductForm(prev => ({ ...prev, original_price: e.target.value }))}
-                          placeholder="Solo para ofertas"
-                          className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none"
+                          placeholder="Ej. 35000"
+                          className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-base sm:text-sm"
                         />
                       </div>
                     </div>
@@ -1737,7 +1980,7 @@ export default function AdminPage() {
                         value={productForm.image_url}
                         onChange={(e) => setProductForm(prev => ({ ...prev, image_url: e.target.value }))}
                         placeholder="https://images.unsplash.com/photo-..."
-                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none"
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-base sm:text-sm"
                       />
                     </div>
 
@@ -1751,13 +1994,13 @@ export default function AdminPage() {
                         value={productForm.tags}
                         onChange={(e) => setProductForm(prev => ({ ...prev, tags: e.target.value }))}
                         placeholder="Ej. Vegano, Popular, Picante"
-                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none"
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-base sm:text-sm"
                       />
                     </div>
 
                     {/* Toggles */}
-                    <div className="flex gap-8 border-t border-white/5 pt-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
+                    <div className="flex flex-wrap gap-6 border-t border-white/5 pt-4">
+                      <label className="flex items-center gap-2 cursor-pointer touch-manipulation">
                         <input
                           type="checkbox"
                           checked={productForm.is_available}
@@ -1766,7 +2009,7 @@ export default function AdminPage() {
                         />
                         <span className="text-xs text-gray-300 font-semibold uppercase">Disponible</span>
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
+                      <label className="flex items-center gap-2 cursor-pointer touch-manipulation">
                         <input
                           type="checkbox"
                           checked={productForm.is_promotion}
@@ -1780,16 +2023,28 @@ export default function AdminPage() {
                     <div className="flex justify-end gap-3 pt-6 border-t border-white/5">
                       <button
                         type="button"
-                        onClick={() => setIsProductModalOpen(false)}
-                        className="px-5 py-3 rounded-full border border-white/10 hover:border-white text-xs font-sans uppercase tracking-widest transition-all"
+                        disabled={productSubmitting}
+                        onClick={() => {
+                          setIsProductModalOpen(false);
+                          setProductFormError('');
+                        }}
+                        className="px-5 py-3 rounded-full border border-white/10 hover:border-white text-xs font-sans uppercase tracking-widest transition-all touch-manipulation active:scale-95 min-h-[44px]"
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
-                        className="px-5 py-3 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-display text-xs uppercase tracking-widest font-bold"
+                        disabled={productSubmitting}
+                        className="px-6 py-3 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-display text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 touch-manipulation active:scale-95 disabled:opacity-60 cursor-pointer min-h-[44px]"
                       >
-                        {editingProduct ? 'Guardar Cambios' : 'Crear Producto'}
+                        {productSubmitting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Guardando...</span>
+                          </>
+                        ) : (
+                          <span>{editingProduct ? 'Guardar Cambios' : 'Crear Producto'}</span>
+                        )}
                       </button>
                     </div>
                   </form>
@@ -1810,12 +2065,14 @@ export default function AdminPage() {
                 <p className="text-gray-400 text-xs mt-1">Administra las agrupaciones de productos del menú digital (ej. Bebidas, Entradas).</p>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   setEditingCategory(null);
+                  setCategoryFormError('');
                   setCategoryForm({ name: '', slug: '', order_index: localCategories.length + 1 });
                   setIsCategoryModalOpen(true);
                 }}
-                className="px-5 py-3 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-sans text-xs uppercase tracking-widest font-bold flex items-center gap-2 hover:shadow-lg hover:scale-103 transition-all duration-300"
+                className="px-5 py-3 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-sans text-xs uppercase tracking-widest font-bold flex items-center gap-2 hover:shadow-lg hover:scale-103 transition-all duration-300 touch-manipulation active:scale-95 cursor-pointer min-h-[44px]"
               >
                 <Plus className="w-4 h-4 stroke-[3]" />
                 Agregar Categoría
@@ -1843,15 +2100,17 @@ export default function AdminPage() {
                         <td className="py-4 text-right">
                           <div className="flex gap-2 justify-end">
                             <button
+                              type="button"
                               onClick={() => handleEditCategory(cat)}
-                              className="p-2 rounded-lg text-gray-400 hover:text-[#FBBF24] hover:bg-white/5 transition-colors"
+                              className="p-2.5 rounded-lg text-gray-400 hover:text-[#FBBF24] hover:bg-white/5 transition-colors touch-manipulation active:scale-90 cursor-pointer"
                               title="Editar"
                             >
                               <Edit className="w-4.5 h-4.5" />
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleDeleteCategory(cat.id)}
-                              className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-white/5 transition-colors"
+                              className="p-2.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-white/5 transition-colors touch-manipulation active:scale-90 cursor-pointer"
                               title="Borrar"
                             >
                               <Trash2 className="w-4.5 h-4.5" />
@@ -1867,11 +2126,35 @@ export default function AdminPage() {
 
             {/* CATEGORY DIALOG FORM MODAL */}
             {isCategoryModalOpen && (
-              <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                <div className="w-full max-w-md p-8 rounded-2xl bg-[#0E172A] border border-[#FBBF24]/40/15 shadow-2xl relative">
-                  <h3 className="font-display text-white text-xl font-bold tracking-wide mb-6 border-b border-white/5 pb-3">
-                    {editingCategory ? 'Editar Categoría' : 'Agregar Categoría'}
-                  </h3>
+              <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
+                <div className="w-full max-w-md p-5 sm:p-8 rounded-2xl bg-[#0E172A] border border-[#FBBF24]/20 shadow-2xl relative max-h-[90dvh] overflow-y-auto overscroll-contain my-auto">
+                  
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between mb-5 pb-3 border-b border-white/5">
+                    <h3 className="font-display text-white text-lg sm:text-xl font-bold tracking-wide">
+                      {editingCategory ? 'Editar Categoría' : 'Agregar Categoría'}
+                    </h3>
+                    <button
+                      type="button"
+                      disabled={categorySubmitting}
+                      onClick={() => {
+                        setIsCategoryModalOpen(false);
+                        setCategoryFormError('');
+                      }}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors touch-manipulation cursor-pointer"
+                      aria-label="Cerrar modal"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Inline Error Notification */}
+                  {categoryFormError && (
+                    <div className="mb-4 p-3.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs font-sans flex items-center gap-2.5 animate-fade-in">
+                      <AlertCircle className="w-4.5 h-4.5 shrink-0 text-red-400" />
+                      <span>{categoryFormError}</span>
+                    </div>
+                  )}
 
                   <form onSubmit={handleCategorySubmit} className="space-y-4 text-sm">
                     {/* Nombre */}
@@ -1892,7 +2175,7 @@ export default function AdminPage() {
                           }));
                         }}
                         placeholder="Ej. Entradas Gourmet"
-                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none"
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-base sm:text-sm"
                       />
                     </div>
 
@@ -1907,7 +2190,7 @@ export default function AdminPage() {
                         value={categoryForm.slug}
                         onChange={(e) => setCategoryForm(prev => ({ ...prev, slug: e.target.value }))}
                         placeholder="ej-entradas-gourmet"
-                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-gray-400"
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-gray-400 text-base sm:text-sm"
                       />
                     </div>
 
@@ -1920,23 +2203,35 @@ export default function AdminPage() {
                         type="number"
                         value={categoryForm.order_index}
                         onChange={(e) => setCategoryForm(prev => ({ ...prev, order_index: Number(e.target.value) }))}
-                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none"
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-base sm:text-sm"
                       />
                     </div>
 
                     <div className="flex justify-end gap-3 pt-6 border-t border-white/5">
                       <button
                         type="button"
-                        onClick={() => setIsCategoryModalOpen(false)}
-                        className="px-5 py-3 rounded-full border border-white/10 hover:border-white text-xs font-sans uppercase tracking-widest transition-all"
+                        disabled={categorySubmitting}
+                        onClick={() => {
+                          setIsCategoryModalOpen(false);
+                          setCategoryFormError('');
+                        }}
+                        className="px-5 py-3 rounded-full border border-white/10 hover:border-white text-xs font-sans uppercase tracking-widest transition-all touch-manipulation active:scale-95 min-h-[44px]"
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
-                        className="px-5 py-3 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-display text-xs uppercase tracking-widest font-bold"
+                        disabled={categorySubmitting}
+                        className="px-6 py-3 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-display text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 touch-manipulation active:scale-95 disabled:opacity-60 cursor-pointer min-h-[44px]"
                       >
-                        {editingCategory ? 'Guardar Cambios' : 'Crear Categoría'}
+                        {categorySubmitting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Guardando...</span>
+                          </>
+                        ) : (
+                          <span>{editingCategory ? 'Guardar Cambios' : 'Crear Categoría'}</span>
+                        )}
                       </button>
                     </div>
                   </form>
@@ -2047,8 +2342,10 @@ export default function AdminPage() {
                 <p className="text-gray-400 text-xs mt-1">Administra las cenas especiales, shows en vivo y catas programadas en tu local.</p>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   setEditingEvent(null);
+                  setEventFormError('');
                   setEventForm({
                     title: '',
                     description: '',
@@ -2058,7 +2355,7 @@ export default function AdminPage() {
                   });
                   setIsEventModalOpen(true);
                 }}
-                className="px-5 py-3 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-sans text-xs uppercase tracking-widest font-bold flex items-center gap-2 hover:shadow-lg hover:scale-103 transition-all duration-300"
+                className="px-5 py-3 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-sans text-xs uppercase tracking-widest font-bold flex items-center gap-2 hover:shadow-lg hover:scale-103 transition-all duration-300 touch-manipulation active:scale-95 cursor-pointer min-h-[44px]"
               >
                 <Plus className="w-4 h-4 stroke-[3]" />
                 Agregar Evento
@@ -2105,28 +2402,31 @@ export default function AdminPage() {
                         </td>
                         <td className="py-4 pr-4 text-center">
                           <button
+                            type="button"
                             onClick={() => toggleEventActive(evt)}
-                            className={`inline-block px-3 py-1 rounded-full text-[9px] uppercase tracking-widest font-bold border transition-all ${
-                              evt.is_active
-                                ? 'bg-emerald-600/20 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/30'
-                                : 'bg-red-950/20 text-red-400 border-red-500/20 hover:bg-red-900/30'
+                            className={`inline-block px-3 py-1.5 rounded-full text-[9px] uppercase tracking-widest font-bold cursor-pointer transition-all touch-manipulation active:scale-95 ${
+                              evt.is_active 
+                                ? 'bg-emerald-600/20 text-emerald-500 border border-emerald-500/20' 
+                                : 'bg-gray-800 text-gray-400 border border-gray-700'
                             }`}
                           >
-                            {evt.is_active ? 'Activo' : 'Inactivo'}
+                            {evt.is_active ? 'Publicado' : 'Oculto'}
                           </button>
                         </td>
                         <td className="py-4 text-right">
                           <div className="flex gap-2 justify-end">
                             <button
+                              type="button"
                               onClick={() => handleEditEvent(evt)}
-                              className="p-2 rounded-lg bg-white/5 border border-white/10 hover:border-[#FBBF24]/30 hover:text-[#FBBF24] text-gray-300 transition-all"
+                              className="p-2.5 rounded-lg text-gray-400 hover:text-[#FBBF24] hover:bg-white/5 transition-colors touch-manipulation active:scale-90 cursor-pointer"
                               title="Editar"
                             >
                               <Edit className="w-4 h-4" />
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleDeleteEvent(evt.id)}
-                              className="p-2 rounded-lg bg-red-950/10 border border-red-500/10 hover:bg-red-500 hover:text-black text-red-400 transition-all"
+                              className="p-2.5 rounded-lg bg-red-950/10 border border-red-500/10 hover:bg-red-500 hover:text-black text-red-400 transition-all touch-manipulation active:scale-90 cursor-pointer"
                               title="Eliminar"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -2147,20 +2447,35 @@ export default function AdminPage() {
 
             {/* Event Form Modal */}
             {isEventModalOpen && (
-              <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-                <div className="w-full max-w-lg bg-[#0E172A] border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl relative">
+              <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in">
+                <div className="w-full max-w-lg bg-[#0E172A] border border-[#FBBF24]/20 rounded-2xl p-5 sm:p-8 shadow-2xl relative max-h-[90dvh] overflow-y-auto overscroll-contain my-auto">
                   
-                  {/* Close button */}
-                  <button
-                    onClick={() => setIsEventModalOpen(false)}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between mb-5 pb-3 border-b border-white/5">
+                    <h3 className="font-display text-white text-lg sm:text-xl font-bold tracking-wide uppercase">
+                      {editingEvent ? 'Editar Evento' : 'Agregar Evento'}
+                    </h3>
+                    <button
+                      type="button"
+                      disabled={eventSubmitting}
+                      onClick={() => {
+                        setIsEventModalOpen(false);
+                        setEventFormError('');
+                      }}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors touch-manipulation cursor-pointer"
+                      aria-label="Cerrar modal"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
 
-                  <h3 className="font-display text-white text-xl font-bold tracking-wide uppercase mb-6 pb-2 border-b border-white/5">
-                    {editingEvent ? 'Editar Evento' : 'Agregar Evento'}
-                  </h3>
+                  {/* Inline Error Notification */}
+                  {eventFormError && (
+                    <div className="mb-4 p-3.5 rounded-xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs font-sans flex items-center gap-2.5 animate-fade-in">
+                      <AlertCircle className="w-4.5 h-4.5 shrink-0 text-red-400" />
+                      <span>{eventFormError}</span>
+                    </div>
+                  )}
 
                   <form onSubmit={handleEventSubmit} className="space-y-4 text-sm">
                     {/* Title */}
@@ -2174,7 +2489,7 @@ export default function AdminPage() {
                         value={eventForm.title}
                         onChange={(e) => setEventForm(prev => ({ ...prev, title: e.target.value }))}
                         placeholder="Ej. Noche de Saxofón & Jazz"
-                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none"
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-base sm:text-sm"
                       />
                     </div>
 
@@ -2188,7 +2503,7 @@ export default function AdminPage() {
                         required
                         value={eventForm.event_date}
                         onChange={(e) => setEventForm(prev => ({ ...prev, event_date: e.target.value }))}
-                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none"
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-base sm:text-sm"
                       />
                     </div>
 
@@ -2202,7 +2517,7 @@ export default function AdminPage() {
                         value={eventForm.image_url}
                         onChange={(e) => setEventForm(prev => ({ ...prev, image_url: e.target.value }))}
                         placeholder="https://images.unsplash.com/..."
-                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none"
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2.5 text-white focus:outline-none text-base sm:text-sm"
                       />
                     </div>
 
@@ -2216,7 +2531,7 @@ export default function AdminPage() {
                         value={eventForm.description}
                         onChange={(e) => setEventForm(prev => ({ ...prev, description: e.target.value }))}
                         placeholder="Cuéntales a tus clientes de qué se tratará la velada..."
-                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2 text-white focus:outline-none resize-none"
+                        className="w-full bg-black/40 border border-white/10 focus:border-[#FBBF24]/50 rounded-xl px-4 py-2 text-white focus:outline-none text-base sm:text-sm resize-none"
                       />
                     </div>
 
@@ -2227,9 +2542,9 @@ export default function AdminPage() {
                         type="checkbox"
                         checked={eventForm.is_active}
                         onChange={(e) => setEventForm(prev => ({ ...prev, is_active: e.target.checked }))}
-                        className="w-4 h-4 accent-gold bg-black/40 border-white/10 rounded"
+                        className="w-4 h-4 accent-gold bg-black/40 border-white/10 rounded cursor-pointer touch-manipulation"
                       />
-                      <label htmlFor="event-active-check" className="text-gray-300 text-xs font-medium cursor-pointer">
+                      <label htmlFor="event-active-check" className="text-gray-300 text-xs font-medium cursor-pointer select-none">
                         Publicar evento inmediatamente (Visible en la Landing)
                       </label>
                     </div>
@@ -2237,16 +2552,28 @@ export default function AdminPage() {
                     <div className="flex justify-end gap-3 pt-6 border-t border-white/5">
                       <button
                         type="button"
-                        onClick={() => setIsEventModalOpen(false)}
-                        className="px-5 py-3 rounded-full border border-white/10 hover:border-white text-xs font-sans uppercase tracking-widest transition-all"
+                        disabled={eventSubmitting}
+                        onClick={() => {
+                          setIsEventModalOpen(false);
+                          setEventFormError('');
+                        }}
+                        className="px-5 py-3 rounded-full border border-white/10 hover:border-white text-xs font-sans uppercase tracking-widest transition-all touch-manipulation active:scale-95 min-h-[44px]"
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
-                        className="px-5 py-3 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-display text-xs uppercase tracking-widest font-bold"
+                        disabled={eventSubmitting}
+                        className="px-6 py-3 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-display text-xs uppercase tracking-widest font-bold flex items-center justify-center gap-2 touch-manipulation active:scale-95 disabled:opacity-60 cursor-pointer min-h-[44px]"
                       >
-                        {editingEvent ? 'Guardar Cambios' : 'Crear Evento'}
+                        {eventSubmitting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>Guardando...</span>
+                          </>
+                        ) : (
+                          <span>{editingEvent ? 'Guardar Cambios' : 'Crear Evento'}</span>
+                        )}
                       </button>
                     </div>
                   </form>
@@ -2555,12 +2882,17 @@ export default function AdminPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (confirm('¿Deseas restablecer todos los productos, eventos y categorías a sus valores iniciales de demostración?')) {
-                        resetDemoData();
-                        alert('¡Datos de demostración restablecidos correctamente!');
-                      }
+                      requestConfirm(
+                        '¿Restablecer datos de prueba?',
+                        'Esta acción volverá a cargar todos los productos, categorías y eventos originales de la demostración.',
+                        () => {
+                          resetDemoData();
+                          showToast('Demostración Restablecida', 'Los datos iniciales de prueba han sido restaurados con éxito.', 'success');
+                        },
+                        { confirmText: 'Restablecer Todo', isDanger: false }
+                      );
                     }}
-                    className="flex items-center gap-2 px-5 py-3 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-semibold uppercase tracking-wider transition-all duration-200"
+                    className="flex items-center gap-2 px-5 py-3 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-semibold uppercase tracking-wider transition-all duration-200 touch-manipulation active:scale-95 cursor-pointer min-h-[44px]"
                   >
                     <RotateCcw className="w-4 h-4" />
                     Restablecer Datos Demo
@@ -2568,9 +2900,17 @@ export default function AdminPage() {
                 )}
                 <button
                   type="submit"
-                  className="px-8 py-4 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-display text-xs uppercase tracking-widest font-bold hover:shadow-[0_0_20px_rgba(212,175,55,0.35)] transition-all duration-300 sm:ml-auto"
+                  disabled={settingsSubmitting}
+                  className="px-8 py-4 rounded-full bg-[#FBBF24] hover:bg-amber-400 text-black font-black shadow-md font-display text-xs uppercase tracking-widest font-bold hover:shadow-[0_0_20px_rgba(212,175,55,0.35)] transition-all duration-300 sm:ml-auto touch-manipulation active:scale-95 disabled:opacity-60 cursor-pointer min-h-[44px] flex items-center gap-2"
                 >
-                  Guardar Cambios del Perfil
+                  {settingsSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Guardando...</span>
+                    </>
+                  ) : (
+                    <span>Guardar Cambios del Perfil</span>
+                  )}
                 </button>
               </div>
 
@@ -2579,6 +2919,97 @@ export default function AdminPage() {
         )}
 
       </main>
+
+      {/* Custom Global Action Confirmation Modal (Mobile friendly) */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-md bg-[#0E172A] border border-white/10 rounded-2xl p-6 shadow-2xl relative animate-scale-up">
+            <div className="flex items-center gap-3 mb-3">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                confirmModal.isDanger ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-[#FBBF24]/10 text-[#FBBF24] border border-[#FBBF24]/20'
+              }`}>
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <h3 className="font-display text-white text-base sm:text-lg font-bold">
+                {confirmModal.title}
+              </h3>
+            </div>
+
+            <p className="text-gray-300 text-xs sm:text-sm leading-relaxed mb-6 font-sans">
+              {confirmModal.message}
+            </p>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2.5 rounded-xl border border-white/10 hover:border-white/20 text-xs uppercase tracking-wider font-semibold text-gray-300 hover:text-white transition-all touch-manipulation active:scale-95 min-h-[40px]"
+              >
+                {confirmModal.cancelText || 'Cancelar'}
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const action = confirmModal.onConfirm;
+                  setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                  await action();
+                }}
+                className={`px-5 py-2.5 rounded-xl text-xs uppercase tracking-wider font-bold shadow-md transition-all touch-manipulation active:scale-95 cursor-pointer min-h-[40px] ${
+                  confirmModal.isDanger 
+                    ? 'bg-red-600 hover:bg-red-500 text-white' 
+                    : 'bg-[#FBBF24] hover:bg-amber-400 text-black'
+                }`}
+              >
+                {confirmModal.confirmText || 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global Floating Toast / Action Confirmation Panel */}
+      {toast && (
+        <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-[110] animate-slide-down">
+          <div className={`p-4 rounded-2xl shadow-2xl border backdrop-blur-xl flex items-start gap-3.5 ${
+            toast.type === 'success'
+              ? 'bg-[#0E172A]/95 border-emerald-500/40 text-white shadow-emerald-950/40'
+              : toast.type === 'error'
+              ? 'bg-[#0E172A]/95 border-red-500/40 text-white shadow-red-950/40'
+              : 'bg-[#0E172A]/95 border-[#FBBF24]/40 text-white shadow-amber-950/40'
+          }`}>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
+              toast.type === 'success'
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : toast.type === 'error'
+                ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                : 'bg-[#FBBF24]/20 text-[#FBBF24] border border-[#FBBF24]/30'
+            }`}>
+              {toast.type === 'success' && <CheckCircle2 className="w-4.5 h-4.5" />}
+              {toast.type === 'error' && <AlertCircle className="w-4.5 h-4.5" />}
+              {toast.type === 'info' && <Info className="w-4.5 h-4.5" />}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <h4 className="font-display text-xs sm:text-sm font-bold text-white tracking-wide">
+                {toast.title}
+              </h4>
+              <p className="text-[11px] sm:text-xs text-gray-300 mt-0.5 leading-relaxed font-sans">
+                {toast.message}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors shrink-0 touch-manipulation cursor-pointer"
+              aria-label="Cerrar notificación"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
